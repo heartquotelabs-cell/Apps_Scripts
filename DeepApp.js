@@ -257,6 +257,9 @@ async function submitReport(e) {
         showToast('Failed to submit report.', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
+        setTimeout(() => {
+          checkAndUnlockBodyScroll();
+            }, 200);
     }
 }
 function setButtonLoading(button, isLoading) {
@@ -610,20 +613,18 @@ async function handleGroupSubmit(e) {
     e.preventDefault();
     const authorNameInput = document.getElementById('author-name');
     const typedName = authorNameInput ? authorNameInput.value.trim() : '';
-    if (typedName) {
+    if (!state.userDisplayName && typedName) {
         const isDuplicateName = await checkDuplicateDisplayName(typedName);
         if (isDuplicateName) {
             showToast('Display name is already taken. Choose another.', 'error');
             authorNameInput.style.borderColor = 'var(--danger)';
             return;
-        }
-    }
-
-    const authorName = state.userDisplayName || typedName;
+        }}
+const authorName = state.userDisplayName || typedName;
 
     if (!state.userDisplayName && typedName && typedName !== 'Anonymous') {
-        state.userDisplayName = typedName;
-        localStorage.setItem('userDisplayName', typedName);
+      state.userDisplayName = typedName;
+       localStorage.setItem('userDisplayName', typedName);
     }
 
     const groupData = {
@@ -658,7 +659,6 @@ async function handleGroupSubmit(e) {
         const success = await addGroupWithSpamProtection(groupData);
         if (success) {
             document.getElementById('group-modal').classList.remove('active');
-            // Force unlock body scroll
             setTimeout(() => {
                 checkAndUnlockBodyScroll();
             }, 200);
@@ -714,8 +714,6 @@ if (document.readyState === 'loading') {
 async function checkDuplicateDisplayName(displayName) {
     try {
         const normalizedName = displayName.trim().toLowerCase();
-        
-        // Check in live groups (already loaded in state)
         const existsInLive = state.groups.some(g => 
             g.authorName && g.authorName.trim().toLowerCase() === normalizedName
         );
