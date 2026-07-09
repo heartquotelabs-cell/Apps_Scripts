@@ -710,7 +710,9 @@ function initWhatsAppApp() {
         state.activeTab = 'featured';
     }
     render();
-    subscribeToGroups();}
+    subscribeToGroups();
+  setupDisplayNameLiveCheck();
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initWhatsAppApp);
