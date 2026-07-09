@@ -439,12 +439,12 @@ function openAddModal() {
         document.querySelector('.author-info').textContent = hasLockedName
             ? `Your display name is locked and can't be changed.`
             : 'Set display name once, it will not change again.';}
-    const indicator = document.getElementById('name-check-indicator');
+const indicator = document.getElementById('name-check-indicator');
 if (indicator) { indicator.className = 'name-check-indicator'; indicator.innerHTML = ''; }
-if (!hasLockedName) authorNameField.style.borderColor = '';
+if (!state.userDisplayName && authorNameField) authorNameField.style.borderColor = '';
 nameAvailability = { name: '', available: null };
     document.getElementById('group-modal').classList.add('active');
-    lockBodyScroll('modal'); // ✅ Add this line
+    lockBodyScroll('modal'); 
     
     if (typeof prepareInterstitial === 'function') prepareInterstitial();
 }
