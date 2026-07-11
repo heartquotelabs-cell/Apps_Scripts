@@ -59,37 +59,45 @@ function subscribeToGroups() {
         unsubscribeGroups();
         unsubscribeGroups = null;
     }
-
     state.isLoading = true;
     state.hasError = false;
     render();
-
     const liveRef = doc(db, 'liveData', 'groups');
+    const slowConnectionTimer = setTimeout(() => {
+        if (state.isLoading) {
+            state.isLoading = false;
+            state.hasError = true;
+            render();
+        }
+    }, 12000);
 
-    unsubscribeGroups = onSnapshot(liveRef,
+    unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
         (docSnap) => {
+            if (docSnap.metadata.fromCache && !docSnap.exists()) {
+                return;
+            }
+
+            clearTimeout(slowConnectionTimer);
             state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
             state.isLoading = false;
             state.hasError = false;
             render();
         },
         (error) => {
+            clearTimeout(slowConnectionTimer);
             console.error('Error fetching groups:', error);
             state.isLoading = false;
             state.hasError = true;
             render();
         }
     );
-    return unsubscribeGroups;
-}
+    return unsubscribeGroups;}
 
 function getFeaturedGroups() {
-    return state.groups.filter(group => group.type === 'featured');
-}
+    return state.groups.filter(group => group.type === 'featured');}
 
 function getUserGroups() {
-    return state.groups.filter(group => group.type === 'user');
-}
+    return state.groups.filter(group => group.type === 'user');}
 
 function getFilteredGroups() {
     switch(state.activeTab) {
@@ -98,9 +106,7 @@ function getFilteredGroups() {
         case 'new':
             return state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
         default:
-            return [];
-    }
-}
+            return [];}}
 
 function createGroupCard(group) {
     const isAdminGroup = group.type === 'featured';
@@ -115,9 +121,10 @@ function createGroupCard(group) {
         </div>
     ` : '';
 
-    const typeBadge = isAdminGroup ? 
-        `<span class="type-badge featured">Verified</span>` : 
-        `<span class="type-badge user">Verified</span>`;
+  const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+const typeBadge = isAdminGroup ? 
+    `<span class="type-badge featured">${verifiedIcon} Verified</span>` : 
+    `<span class="type-badge user">${verifiedIcon} Verified</span>`;
 
     const authorDisplay = group.authorName ? `
         <div class="group-author">
@@ -433,7 +440,6 @@ function openAddModal() {
     if (authorNameField) {
         const hasLockedName = !!state.userDisplayName;
         authorNameField.value = state.userDisplayName || '';
-        authorNameField.placeholder = 'Your Display Name';
         authorNameField.disabled = hasLockedName;
         document.querySelector('.author-input-section h4').textContent = 'Your Display Name';
         document.querySelector('.author-info').textContent = hasLockedName
