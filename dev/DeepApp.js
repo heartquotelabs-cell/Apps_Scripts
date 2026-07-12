@@ -184,7 +184,7 @@ ${typeBadge}
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                         </svg>
-                        Report
+                         Report
                     </button>
                 ` : '<span></span>'}
 <button class="footer-bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" 
@@ -192,10 +192,11 @@ onclick="toggleBookmark('${group.id}')"
 id="bookmark-${group.id}" 
 aria-label="Bookmark group">
 ${bookmarkIcon}
+ Bookmark
 </button>
 <a href="${escapeHtml(group.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
 ${icons.whatsapp}
-Join Group 
+ Join Group 
 </a>
 </div>
         </div>
@@ -410,18 +411,13 @@ function renderGroupsBody() {
             <h2 class="section-title">
                 ${state.activeTab === 'featured' ? 'Featured Groups' :
                   state.activeTab === 'new' ? 'New Groups' :
-                  state.activeTab === 'bookmarks' ? '📑 Your Bookmarks' : 'Groups'}
+                  state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
             </h2>
             ${state.activeTab === 'new' ? `
-                <button class="btn btn-primary" onclick="openAddModal()">
-                    ${icons.plus}
-                    Add Group
-                </button>
-            ` : ''}
-            ${state.activeTab === 'bookmarks' && filteredGroups.length === 0 ? `
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                    No bookmarked groups yet. Browse groups and tap the bookmark icon to save them here.
-                </p>
+<button class="btn btn-primary" onclick="openAddModal()">
+${icons.plus}
+Add Group
+</button>
             ` : ''}
         </div>
 
@@ -743,12 +739,12 @@ if (!groupData.country) {
             return;
         }
 
-        const success = await addGroupWithSpamProtection(groupData);
-        if (success) {
-            document.getElementById('group-modal').classList.remove('active');
-            setTimeout(() => { checkAndUnlockBodyScroll(); }, 200);
-            if (typeof showInterstitialAfterSubmit === 'function') {
-                setTimeout(() => { showInterstitialAfterSubmit(); }, 500);
+const success = await addGroupWithSpamProtection(groupData);
+if (success) {
+document.getElementById('group-modal').classList.remove('active');
+setTimeout(() => { checkAndUnlockBodyScroll(); }, 200);
+if (typeof showInterstitialAfterSubmit === 'function') {
+setTimeout(() => { showInterstitialAfterSubmit(); }, 500);
             }
         }
     } catch (error) {
