@@ -154,6 +154,10 @@ ${typeBadge}
     <div class="meta-left">
         ${icons.users}
         <span>${group.members || 0} members</span>
+        ${group.country ? `
+            <span class="meta-dot">•</span>
+            <span class="country-chip">${getCountryFlag(group.country)} ${escapeHtml(getCountryName(group.country))}</span>
+        ` : ''}
     </div>
     <div class="meta-right">
         ${group.category ? `<span class="category-chip">${escapeHtml(group.category)}</span>` : ''}
@@ -435,7 +439,11 @@ function openAddModal() {
     document.getElementById('group-category').value = '';
     document.getElementById('category-placeholder').textContent = 'Select a category';
     document.getElementById('category-placeholder').classList.remove('selected');
-    
+        selectedCountry = '';
+    document.getElementById('group-country').value = '';
+    document.getElementById('country-placeholder').textContent = 'Select a country';
+    document.getElementById('country-placeholder').classList.remove('selected');
+
     const authorNameField = document.getElementById('author-name');
     if (authorNameField) {
         const hasLockedName = !!state.userDisplayName;
@@ -482,6 +490,23 @@ async function checkDuplicateGroupLink(link) {
     } catch (error) {
         console.error('Error checking duplicate link:', error);
         return false;
+    }
+}
+
+async function isUrlBanned(link) {
+    try {
+        const normalizedLink = normalizeWhatsAppLink(link).toLowerCase();
+        const bannedSnap = await getDocs(collection(db, 'bannedUrls'));
+        for (const docSnap of bannedSnap.docs) {
+            const bannedUrl = (docSnap.data().url || '').toLowerCase().trim();
+            if (bannedUrl && normalizedLink.includes(bannedUrl)) {
+                return { banned: true, reason: docSnap.data().reason || null };
+            }
+        }
+        return { banned: false };
+    } catch (error) {
+        console.error('Error checking banned URL:', error);
+        return { banned: false };
     }
 }
 
@@ -560,6 +585,12 @@ async function addGroupWithSpamProtection(groupData) {
         const linkValidation = validateWhatsAppLink(groupData.link);
         if (!linkValidation.valid) {
             showToast(linkValidation.message, 'error');
+            return false;
+        }
+
+        const banCheck = await isUrlBanned(groupData.link);
+        if (banCheck.banned) {
+            showToast('Link is blocked by system', 'error');
             return false;
         }
         
@@ -651,19 +682,23 @@ async function handleGroupSubmit(e) {
         }
 
         const groupData = {
-            name: document.getElementById('group-name').value.trim(),
-            link: document.getElementById('group-link').value.trim(),
-            description: document.getElementById('group-description').value.trim(),
-            members: parseInt(document.getElementById('group-members').value) || 0,
-            category: document.getElementById('group-category').value,
-            iconUrl: document.getElementById('group-icon-url').value.trim() || null,
-            authorName: authorName || 'Anonymous'
-        };
+    name: document.getElementById('group-name').value.trim(),
+    link: document.getElementById('group-link').value.trim(),
+    description: document.getElementById('group-description').value.trim(),
+    members: parseInt(document.getElementById('group-members').value) || 0,
+    category: document.getElementById('group-category').value,
+    country: document.getElementById('group-country').value, 
+    iconUrl: document.getElementById('group-icon-url').value.trim() || null,
+    authorName: authorName || 'Anonymous'
+};
+
+if (!groupData.country) {
+    showToast('Please select a country', 'error');
+    return;}
 
         if (!groupData.category) {
             showToast('Please select a category', 'error');
-            return;
-        }
+            return;}
         if (!groupData.name || groupData.name.length < 3) {
             showToast('Group name must be at least 3 characters', 'error');
             return;
