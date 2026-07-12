@@ -105,6 +105,8 @@ function getFilteredGroups() {
             return state.groups.filter(group => group.type === 'featured' || group.type === 'admin');
         case 'new':
             return state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
+        case 'bookmarks':
+            return (window.BookmarkManager ? window.BookmarkManager.getBookmarkedGroups(state.groups) : []);
         default:
             return [];}}
 
@@ -121,7 +123,7 @@ function createGroupCard(group) {
         </div>
     ` : '';
 
-  const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+  const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
 const typeBadge = isAdminGroup ? 
     `<span class="type-badge featured">${verifiedIcon} Verified</span>` : 
     `<span class="type-badge user">${verifiedIcon} Verified</span>`;
@@ -132,6 +134,17 @@ const typeBadge = isAdminGroup ?
 ${group.createdAt ? `<span class="meta-dot">•</span><span>${formatDate(new Date(group.createdAt))}</span>` : ''}      </span>
         </div>
     ` : '';
+
+   const isBookmarked = BookmarkManager.isBookmarked(group.id);
+    const bookmarkIcon = isBookmarked ? `
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    ` : `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    `;
 
     return `
         <div class="group-card">
@@ -174,11 +187,17 @@ ${typeBadge}
                         Report
                     </button>
                 ` : '<span></span>'}
-                <a href="${escapeHtml(group.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
-                    ${icons.whatsapp}
-                    Join Group 
-                </a>
-            </div>
+<button class="footer-bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" 
+onclick="toggleBookmark('${group.id}')" 
+id="bookmark-${group.id}" 
+aria-label="Bookmark group">
+${bookmarkIcon}
+</button>
+<a href="${escapeHtml(group.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
+${icons.whatsapp}
+Join Group 
+</a>
+</div>
         </div>
     `;
 }
@@ -334,59 +353,75 @@ function formatDate(date) {
 function createEmptyState() {
     const messages = {
         featured: 'Explore Groups section or check back later!',
-        new: 'No user-added groups yet. Be the first to add one!'
+        new: 'No user-added groups yet. Be the first to add one!',
+        bookmarks: 'No bookmarked groups yet. Browse groups and tap the bookmark icon to save them here!'
     };
 
     return `
         <div class="empty-state">
             <div class="empty-icon">
-                ${icons.group}
+                ${state.activeTab === 'bookmarks' ? 
+                    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:40px;height:40px;">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>` :
+                    icons.group
+                }
             </div>
-            <h3 class="empty-title">No Groups Found</h3>
+            <h3 class="empty-title">${state.activeTab === 'bookmarks' ? 'No Bookmarks' : 'No Groups Found'}</h3>
             <p class="empty-text">
                 ${messages[state.activeTab] || 'No groups available at the moment.'}
             </p>
         </div>
     `;
 }
+
 function renderGroupsBody() {
     const filteredGroups = getFilteredGroups();
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
+    
+    // Update bookmark count
+    BookmarkManager.updateBookmarkCount();
 
     return `
-<div class="stats-bar">
-    <div class="stat-card">
-        <div class="stat-info">
-            <h3>${filteredGroups.length}</h3>
-            <p>Active Groups</p>
-        </div>
-    </div>
-    ${state.activeTab === 'new' && state.userDisplayName ? `
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>${state.myGroupsStatus.pending}</h3>
-                <p>Pending Review</p>
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>${filteredGroups.length}</h3>
+                    <p>${state.activeTab === 'bookmarks' ? 'Bookmarked Groups' : 'Active Groups'}</p>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>${state.myGroupsStatus.approved}</h3>
-                <p>Your Approved</p>
-            </div>
-        </div>
-    ` : ''}
-</div> 
+            ${state.activeTab === 'new' && state.userDisplayName ? `
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>${state.myGroupsStatus.pending}</h3>
+                        <p>Pending Review</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>${state.myGroupsStatus.approved}</h3>
+                        <p>Your Approved</p>
+                    </div>
+                </div>
+            ` : ''}
+        </div> 
 
         <div class="section-header">
             <h2 class="section-title">
                 ${state.activeTab === 'featured' ? 'Featured Groups' :
-                  state.activeTab === 'new' ? 'New Groups' : 'Groups'}
+                  state.activeTab === 'new' ? 'New Groups' :
+                  state.activeTab === 'bookmarks' ? '📑 Your Bookmarks' : 'Groups'}
             </h2>
             ${state.activeTab === 'new' ? `
                 <button class="btn btn-primary" onclick="openAddModal()">
                     ${icons.plus}
                     Add Group
                 </button>
+            ` : ''}
+            ${state.activeTab === 'bookmarks' && filteredGroups.length === 0 ? `
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                    No bookmarked groups yet. Browse groups and tap the bookmark icon to save them here.
+                </p>
             ` : ''}
         </div>
 
