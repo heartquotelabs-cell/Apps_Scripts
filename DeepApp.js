@@ -59,37 +59,45 @@ function subscribeToGroups() {
         unsubscribeGroups();
         unsubscribeGroups = null;
     }
-
     state.isLoading = true;
     state.hasError = false;
     render();
-
     const liveRef = doc(db, 'liveData', 'groups');
+    const slowConnectionTimer = setTimeout(() => {
+        if (state.isLoading) {
+            state.isLoading = false;
+            state.hasError = true;
+            render();
+        }
+    }, 12000);
 
-    unsubscribeGroups = onSnapshot(liveRef,
+    unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
         (docSnap) => {
+            if (docSnap.metadata.fromCache && !docSnap.exists()) {
+                return;
+            }
+
+            clearTimeout(slowConnectionTimer);
             state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
             state.isLoading = false;
             state.hasError = false;
             render();
         },
         (error) => {
+            clearTimeout(slowConnectionTimer);
             console.error('Error fetching groups:', error);
             state.isLoading = false;
             state.hasError = true;
             render();
         }
     );
-    return unsubscribeGroups;
-}
+    return unsubscribeGroups;}
 
 function getFeaturedGroups() {
-    return state.groups.filter(group => group.type === 'featured');
-}
+    return state.groups.filter(group => group.type === 'featured');}
 
 function getUserGroups() {
-    return state.groups.filter(group => group.type === 'user');
-}
+    return state.groups.filter(group => group.type === 'user');}
 
 function getFilteredGroups() {
     switch(state.activeTab) {
@@ -97,10 +105,10 @@ function getFilteredGroups() {
             return state.groups.filter(group => group.type === 'featured' || group.type === 'admin');
         case 'new':
             return state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
+        case 'bookmarks':
+            return (window.BookmarkManager ? window.BookmarkManager.getBookmarkedGroups(state.groups) : []);
         default:
-            return [];
-    }
-}
+            return [];}}
 
 function createGroupCard(group) {
     const isAdminGroup = group.type === 'featured';
@@ -115,9 +123,10 @@ function createGroupCard(group) {
         </div>
     ` : '';
 
-    const typeBadge = isAdminGroup ? 
-        `<span class="type-badge featured">Verified</span>` : 
-        `<span class="type-badge user">Verified</span>`;
+  const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+const typeBadge = isAdminGroup ? 
+    `<span class="type-badge featured">${verifiedIcon} Verified</span>` : 
+    `<span class="type-badge user">${verifiedIcon} Verified</span>`;
 
     const authorDisplay = group.authorName ? `
         <div class="group-author">
@@ -125,6 +134,17 @@ function createGroupCard(group) {
 ${group.createdAt ? `<span class="meta-dot">•</span><span>${formatDate(new Date(group.createdAt))}</span>` : ''}      </span>
         </div>
     ` : '';
+
+   const isBookmarked = BookmarkManager.isBookmarked(group.id);
+    const bookmarkIcon = isBookmarked ? `
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    ` : `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    `;
 
     return `
         <div class="group-card">
@@ -147,6 +167,10 @@ ${typeBadge}
     <div class="meta-left">
         ${icons.users}
         <span>${group.members || 0} members</span>
+        ${group.country ? `
+            <span class="meta-dot">•</span>
+            <span class="country-chip">${getCountryFlag(group.country)} ${escapeHtml(getCountryName(group.country))}</span>
+        ` : ''}
     </div>
     <div class="meta-right">
         ${group.category ? `<span class="category-chip">${escapeHtml(group.category)}</span>` : ''}
@@ -160,14 +184,21 @@ ${typeBadge}
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                         </svg>
-                        Report
+                         Report
                     </button>
                 ` : '<span></span>'}
-                <a href="${escapeHtml(group.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
-                    ${icons.whatsapp}
-                    Join
-                </a>
-            </div>
+<button class="footer-bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" 
+onclick="toggleBookmark('${group.id}')" 
+id="bookmark-${group.id}" 
+aria-label="Bookmark group">
+${bookmarkIcon}
+ Bookmark
+</button>
+<a href="${escapeHtml(group.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
+${icons.whatsapp}
+ Join Group 
+</a>
+</div>
         </div>
     `;
 }
@@ -189,7 +220,7 @@ function openReportModal(groupId) {
     });
     
     document.getElementById('report-modal').classList.add('active');
-    lockBodyScroll('modal'); // ✅ Add this line
+    lockBodyScroll('modal'); 
 }
 function closeReportModal() {
     document.getElementById('report-modal').classList.remove('active');
@@ -323,59 +354,68 @@ function formatDate(date) {
 function createEmptyState() {
     const messages = {
         featured: 'Explore Groups section or check back later!',
-        new: 'No user-added groups yet. Be the first to add one!'
+        new: 'No user-added groups yet. Be the first to add one!',
+        bookmarks: 'No bookmarked groups yet. Browse groups and tap the bookmark icon to save them here!'
     };
 
     return `
         <div class="empty-state">
             <div class="empty-icon">
-                ${icons.group}
+                ${state.activeTab === 'bookmarks' ? 
+                    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:40px;height:40px;">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>` :
+                    icons.group
+                }
             </div>
-            <h3 class="empty-title">No Groups Found</h3>
+            <h3 class="empty-title">${state.activeTab === 'bookmarks' ? 'No Bookmarks' : 'No Groups Found'}</h3>
             <p class="empty-text">
                 ${messages[state.activeTab] || 'No groups available at the moment.'}
             </p>
         </div>
     `;
 }
+
 function renderGroupsBody() {
     const filteredGroups = getFilteredGroups();
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
+    BookmarkManager.updateBookmarkCount();
 
     return `
-<div class="stats-bar">
-    <div class="stat-card">
-        <div class="stat-info">
-            <h3>${filteredGroups.length}</h3>
-            <p>Active Groups</p>
-        </div>
-    </div>
-    ${state.activeTab === 'new' && state.userDisplayName ? `
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>${state.myGroupsStatus.pending}</h3>
-                <p>Pending Review</p>
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <h3>${filteredGroups.length}</h3>
+                    <p>${state.activeTab === 'bookmarks' ? 'Bookmarked Groups' : 'Active Groups'}</p>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-info">
-                <h3>${state.myGroupsStatus.approved}</h3>
-                <p>Your Approved</p>
-            </div>
-        </div>
-    ` : ''}
-</div> 
+            ${state.activeTab === 'new' && state.userDisplayName ? `
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>${state.myGroupsStatus.pending}</h3>
+                        <p>Pending Review</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>${state.myGroupsStatus.approved}</h3>
+                        <p>Your Approved</p>
+                    </div>
+                </div>
+            ` : ''}
+        </div> 
 
         <div class="section-header">
             <h2 class="section-title">
                 ${state.activeTab === 'featured' ? 'Featured Groups' :
-                  state.activeTab === 'new' ? 'Newly Added Groups' : 'Groups'}
+                  state.activeTab === 'new' ? 'New Groups' :
+                  state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
             </h2>
             ${state.activeTab === 'new' ? `
-                <button class="btn btn-primary" onclick="openAddModal()">
-                    ${icons.plus}
-                    Add Group
-                </button>
+<button class="btn btn-primary" onclick="openAddModal()">
+${icons.plus}
+Add Group
+</button>
             ` : ''}
         </div>
 
@@ -408,42 +448,38 @@ function render() {
                 'Slow or no internet connection. Please check your network and try again.',
                 () => subscribeToGroups()
             );
-        }
-        return;
-    }
+        }return;}
     if (window.AppUI) {
         const filteredGroups = getFilteredGroups();
-        window.AppUI.renderGroups(renderGroupsBody());
-    }
-}
+        window.AppUI.renderGroups(renderGroupsBody());}}
 
 function openAddModal() {
     document.getElementById('modal-title').textContent = 'Add New Group';
     document.getElementById('modal-submit-btn').textContent = 'submit for review';
-    
     document.getElementById('group-form').reset();
-    
-    // Reset category
     selectedCategory = '';
     document.getElementById('group-category').value = '';
     document.getElementById('category-placeholder').textContent = 'Select a category';
     document.getElementById('category-placeholder').classList.remove('selected');
-    
+        selectedCountry = '';
+    document.getElementById('group-country').value = '';
+    document.getElementById('country-placeholder').textContent = 'Select a country';
+    document.getElementById('country-placeholder').classList.remove('selected');
     const authorNameField = document.getElementById('author-name');
     if (authorNameField) {
-        const hasLockedName = !!state.userDisplayName;
-        authorNameField.value = state.userDisplayName || '';
-        authorNameField.placeholder = 'Your Display Name';
-        authorNameField.disabled = hasLockedName;
-        document.querySelector('.author-input-section h4').textContent = 'Your Display Name';
-        document.querySelector('.author-info').textContent = hasLockedName
-            ? `Your display name is locked and can't be changed.`
-            : 'Set display name once, it will not change again.';
-    }
-    
+const hasLockedName = !!state.userDisplayName;
+authorNameField.value = state.userDisplayName || '';
+authorNameField.disabled = hasLockedName;
+document.querySelector('.author-input-section h4').textContent = '';
+document.querySelector('.author-info').textContent = hasLockedName
+? `Your display name is locked and can't be changed.`
+: 'Set your display name once, it will not change again.';}
+const indicator = document.getElementById('name-check-indicator');
+if (indicator) { indicator.className = 'name-check-indicator'; indicator.innerHTML = ''; }
+if (!state.userDisplayName && authorNameField) authorNameField.style.borderColor = '';
+nameAvailability = { name: '', available: null };
     document.getElementById('group-modal').classList.add('active');
-    lockBodyScroll('modal'); // ✅ Add this line
-    
+    lockBodyScroll('modal'); 
     if (typeof prepareInterstitial === 'function') prepareInterstitial();
 }
 
@@ -473,9 +509,22 @@ async function checkDuplicateGroupLink(link) {
         return existsInLive || !pendingSnap.empty;
     } catch (error) {
         console.error('Error checking duplicate link:', error);
-        return false;
-    }
-}
+        return false;}}
+
+async function isUrlBanned(link) {
+    try {
+        const normalizedLink = normalizeWhatsAppLink(link).toLowerCase();
+        const bannedSnap = await getDocs(collection(db, 'bannedUrls'));
+        for (const docSnap of bannedSnap.docs) {
+            const bannedUrl = (docSnap.data().url || '').toLowerCase().trim();
+            if (bannedUrl && normalizedLink.includes(bannedUrl)) {
+                return { banned: true, reason: docSnap.data().reason || null };
+            }
+        }
+        return { banned: false };
+    } catch (error) {
+        console.error('Error checking banned URL:', error);
+        return { banned: false };}}
 
 function checkRateLimit(userIP) {
     const now = Date.now();
@@ -484,10 +533,9 @@ function checkRateLimit(userIP) {
     
     if (recentSubs.length >= 5) {
         return {
-            allowed: false,
-            message: 'Rate limit exceeded: Maximum 5 groups per hour'
-        };
-    }
+allowed: false,
+message: 'Rate limit exceeded: Maximum 5 groups per hour'
+};}
     
     if (recentSubs.length > 0) {
         const lastSubmission = recentSubs[recentSubs.length - 1];
@@ -554,6 +602,12 @@ async function addGroupWithSpamProtection(groupData) {
             showToast(linkValidation.message, 'error');
             return false;
         }
+
+        const banCheck = await isUrlBanned(groupData.link);
+        if (banCheck.banned) {
+            showToast('Link is blocked by system', 'error');
+            return false;
+        }
         
         const isDuplicate = await checkDuplicateGroupLink(groupData.link);
         if (isDuplicate) {
@@ -611,62 +665,70 @@ async function addGroupWithSpamProtection(groupData) {
 
 async function handleGroupSubmit(e) {
     e.preventDefault();
-    const authorNameInput = document.getElementById('author-name');
-    const typedName = authorNameInput ? authorNameInput.value.trim() : '';
-    if (!state.userDisplayName && typedName) {
-        const isDuplicateName = await checkDuplicateDisplayName(typedName);
-        if (isDuplicateName) {
-            showToast('Display name is already taken. Choose another.', 'error');
-            authorNameInput.style.borderColor = 'var(--danger)';
-            return;
-        }}
-const authorName = state.userDisplayName || typedName;
-
-    if (!state.userDisplayName && typedName && typedName !== 'Anonymous') {
-      state.userDisplayName = typedName;
-       localStorage.setItem('userDisplayName', typedName);
-    }
-
-    const groupData = {
-        name: document.getElementById('group-name').value.trim(),
-        link: document.getElementById('group-link').value.trim(),
-        description: document.getElementById('group-description').value.trim(),
-        members: parseInt(document.getElementById('group-members').value) || 0,
-        category: document.getElementById('group-category').value,
-        iconUrl: document.getElementById('group-icon-url').value.trim() || null,
-        authorName: authorName || 'Anonymous'
-    };
-
-    if (!groupData.category) {
-        showToast('Please select a category', 'error');
-        return;
-    }
-
-    if (!groupData.name || groupData.name.length < 3) {
-        showToast('Group name must be at least 3 characters', 'error');
-        return;
-    }
-
-    if (!groupData.link) {
-        showToast('WhatsApp link is required', 'error');
-        return;
-    }
 
     const submitBtn = document.getElementById('modal-submit-btn');
+    if (submitBtn.disabled) return;
     setButtonLoading(submitBtn, true);
 
     try {
-        const success = await addGroupWithSpamProtection(groupData);
-        if (success) {
-            document.getElementById('group-modal').classList.remove('active');
-            setTimeout(() => {
-                checkAndUnlockBodyScroll();
-            }, 200);
-            
-            if (typeof showInterstitialAfterSubmit === 'function') {
-                setTimeout(() => {
-                    showInterstitialAfterSubmit();
-                }, 500);
+        const authorNameInput = document.getElementById('author-name');
+        const typedName = authorNameInput ? authorNameInput.value.trim() : '';
+
+        if (!state.userDisplayName && typedName) {
+            let isDuplicateName;
+            if (nameAvailability.name === typedName && nameAvailability.available !== null) {
+                isDuplicateName = !nameAvailability.available;
+            } else {
+                isDuplicateName = await checkDuplicateDisplayName(typedName);
+            }
+
+            if (isDuplicateName) {
+                showToast('Display name is already taken. Choose another.', 'error');
+                authorNameInput.style.borderColor = 'var(--danger)';
+                return;
+            }
+        }
+
+        const authorName = state.userDisplayName || typedName;
+
+        if (!state.userDisplayName && typedName && typedName !== 'Anonymous') {
+            state.userDisplayName = typedName;
+            localStorage.setItem('userDisplayName', typedName);
+        }
+
+        const groupData = {
+    name: document.getElementById('group-name').value.trim(),
+    link: document.getElementById('group-link').value.trim(),
+    description: document.getElementById('group-description').value.trim(),
+    members: parseInt(document.getElementById('group-members').value) || 0,
+    category: document.getElementById('group-category').value,
+    country: document.getElementById('group-country').value, 
+    iconUrl: document.getElementById('group-icon-url').value.trim() || null,
+    authorName: authorName || 'Anonymous'
+};
+
+if (!groupData.country) {
+    showToast('Please select a country', 'error');
+    return;}
+
+        if (!groupData.category) {
+            showToast('Please select a category', 'error');
+            return;}
+        if (!groupData.name || groupData.name.length < 3) {
+            showToast('Group name must be at least 3 characters', 'error');
+            return;
+        }
+        if (!groupData.link) {
+            showToast('WhatsApp link is required', 'error');
+            return;
+        }
+
+const success = await addGroupWithSpamProtection(groupData);
+if (success) {
+document.getElementById('group-modal').classList.remove('active');
+setTimeout(() => { checkAndUnlockBodyScroll(); }, 200);
+if (typeof showInterstitialAfterSubmit === 'function') {
+setTimeout(() => { showInterstitialAfterSubmit(); }, 500);
             }
         }
     } catch (error) {
@@ -704,7 +766,9 @@ function initWhatsAppApp() {
         state.activeTab = 'featured';
     }
     render();
-    subscribeToGroups();}
+    subscribeToGroups();
+  setupDisplayNameLiveCheck();
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initWhatsAppApp);
@@ -722,8 +786,6 @@ async function checkDuplicateDisplayName(displayName) {
             console.log('Display name found in live groups:', displayName);
             return true;
         }
-        
-        // Check in pending groups directly from Firestore
         const pendingQuery = query(
             collection(db, 'pendingGroups'), 
             where('authorName', '==', displayName.trim())
@@ -739,9 +801,216 @@ async function checkDuplicateDisplayName(displayName) {
     } catch (error) {
         console.error('Error checking duplicate display name:', error);
         return false;
-    }
-}
+    }}
 
+let nameCheckTimeout = null;
+let nameCheckToken = 0;
+let nameAvailability = { name: '', available: null };
+
+function setupDisplayNameLiveCheck() {
+    const input = document.getElementById('author-name');
+    const indicator = document.getElementById('name-check-indicator');
+    if (!input || !indicator) return;
+
+    input.addEventListener('input', () => {
+        clearTimeout(nameCheckTimeout);
+        indicator.className = 'name-check-indicator';
+        input.style.borderColor = '';
+        nameAvailability = { name: '', available: null };
+
+        if (state.userDisplayName) return;
+
+        const typed = input.value.trim();
+        if (!typed || typed.length < 2) return;
+
+        nameCheckTimeout = setTimeout(async () => {
+            const myToken = ++nameCheckToken;
+            indicator.className = 'name-check-indicator checking';
+
+            const isDuplicate = await checkDuplicateDisplayName(typed);
+            if (myToken !== nameCheckToken) return;
+            nameAvailability = { name: typed, available: !isDuplicate };
+
+            if (isDuplicate) {
+                indicator.className = 'name-check-indicator taken';
+                indicator.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+                input.style.borderColor = 'var(--danger)';
+            } else {
+                indicator.className = 'name-check-indicator available';
+                indicator.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                input.style.borderColor = 'var(--success)';
+            }
+        }, 1500); });}
+   (function() {
+    setTimeout(function() {
+        const existing = document.getElementById('ios-modal-wrapper');
+        if (existing) existing.remove();
+
+        const CONFIG = {
+            latestVersion: "1.1.0",
+            minRequiredVersion: "1.0.0",
+            playStoreUrl: "https://play.google.com/store/apps/details?id=com.heartquotelabs.heartlink",
+            title: "Update Available",
+            msgOptional: "A new version is available with fresh features. Would you like to update now?",
+            msgForce: "Your app version is no longer supported. Please update to the latest version to continue."
+        };
+
+        function compareVersions(v1, v2) {
+            const parts1 = v1.split('.').map(num => parseInt(num, 10));
+            const parts2 = v2.split('.').map(num => parseInt(num, 10));
+            const maxLength = Math.max(parts1.length, parts2.length);
+
+            for (let i = 0; i < maxLength; i++) {
+                const num1 = i < parts1.length ? parts1[i] : 0;
+                const num2 = i < parts2.length ? parts2[i] : 0;
+                if (num1 > num2) return 1;
+                if (num1 < num2) return -1;
+            }
+            return 0;
+        }
+
+        const current = window.APP_CURRENT_VERSION || "0.0.0";
+
+        console.log(`[Update Check] Current: ${current}, Latest: ${CONFIG.latestVersion}, Min Required: ${CONFIG.minRequiredVersion}`);
+
+        if (compareVersions(current, CONFIG.latestVersion) >= 0) {
+            console.log('[Update Check] Version is up to date. Modal not shown.');
+            return;
+        }
+
+        const isForceUpdate = compareVersions(current, CONFIG.minRequiredVersion) < 0;
+        console.log(`[Update Check] Force update required: ${isForceUpdate}`);
+
+        if (!document.getElementById('ios-update-styles')) {
+            const style = document.createElement('style');
+            style.id = 'ios-update-styles';
+            style.textContent = `
+                #ios-modal-wrapper {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.4);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999999;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    touch-action: none;
+                }
+                .ios-alert {
+                    width: 270px;
+                    background: rgba(255, 255, 255, 0.98);
+                    border-radius: 14px;
+                    overflow: hidden;
+                    text-align: center;
+                    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+                    animation: ios-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    backdrop-filter: blur(0px);
+                }
+                @keyframes ios-in {
+                    from { 
+                        transform: scale(0.96); 
+                        opacity: 0;
+                    }
+                    to { 
+                        transform: scale(1); 
+                        opacity: 1;
+                    }
+                }
+                .ios-body {
+                    padding: 20px 16px 18px 16px;
+                    background: #ffffff;
+                }
+                .ios-title {
+                    font-weight: 600;
+                    font-size: 17px;
+                    margin-bottom: 8px;
+                    color: #000000;
+                    letter-spacing: -0.02em;
+                    line-height: 1.3;
+                }
+                .ios-msg {
+                    font-size: 13px;
+                    color: #8e8e93;
+                    line-height: 1.4;
+                    letter-spacing: -0.01em;
+                }
+                .ios-footer {
+                    display: flex;
+                    height: 44px;
+                    align-items: stretch;
+                    border-top: 0.5px solid #c6c6c8;
+                    background: #ffffff;
+                }
+                .ios-btn {
+                    flex: 1;
+                    border: none;
+                    font-size: 17px;
+                    cursor: pointer;
+                    outline: none;
+                    height: 44px;
+                    border-radius: 0px;
+                    background: #ffffff;
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    -webkit-tap-highlight-color: transparent;
+                    transition: background 0.1s ease;
+                    font-weight: 500;
+                    letter-spacing: -0.02em;
+                }
+                .ios-btn:active {
+                    background: #e5e5ea;
+                }
+                .btn-later {
+                    color: #007aff;
+                    border-right: 0.5px solid #c6c6c8;
+                    font-weight: 500;
+                }
+                .btn-update {
+                    color: #007aff;
+                    font-weight: 600;
+                }
+                .btn-force {
+                    color: #007aff;
+                    font-weight: 600;
+                    width: 100%;
+                    background: #ffffff;
+                }
+                .btn-force:active {
+                    background: #e5e5ea;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'ios-modal-wrapper';
+
+        const message = isForceUpdate ? CONFIG.msgForce : CONFIG.msgOptional;
+        const footerHtml = isForceUpdate 
+            ? `<button class="ios-btn btn-force" id="update-action">Update Now</button>`
+            : `<button class="ios-btn btn-later" id="later-action">Later</button>
+               <button class="ios-btn btn-update" id="update-action">Update</button>`;
+
+        wrapper.innerHTML = `
+            <div class="ios-alert">
+                <div class="ios-body">
+                    <div class="ios-title">${CONFIG.title}</div>
+                    <div class="ios-msg">${message}</div>
+                </div>
+                <div class="ios-footer">${footerHtml}</div>
+            </div>
+        `;
+
+document.body.appendChild(wrapper);const updateBtn = wrapper.querySelector('#update-action');const laterBtn = wrapper.querySelector('#later-action');updateBtn.onclick = () => {const url = CONFIG.playStoreUrl;if (window.cordova && window.cordova.InAppBrowser) {window.cordova.InAppBrowser.open(url, '_system');console.log('[Update Check] Opening Play Store via InAppBrowser');return;}const isAndroid = /android/i.test(navigator.userAgent);if (isAndroid) {const packageName = url.match(/id=([^&]+)/)?.[1];if (packageName) {console.log('[Update Check] Opening Play Store via market:// protocol');window.location.href = `market://details?id=${packageName}`;setTimeout(() => {console.log('[Update Check] Fallback to web URL');window.location.href = url;}, 2000);return;}}console.log('[Update Check] Opening Play Store via window.open');const newWindow = window.open(url, '_blank');if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {console.log('[Update Check] Popup blocked, navigating current window');window.location.href = url;}};if (laterBtn) {laterBtn.onclick = () => {wrapper.remove();};}wrapper.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });}, 300);})();     
+        
 window.syncTabState = syncTabState;
 window.openAddModal = openAddModal;
 window.handleGroupSubmit = handleGroupSubmit;
@@ -761,6 +1030,7 @@ window.getActiveTab = () => state.activeTab;
 window.createGroupCard = createGroupCard;
 window.escapeHtml = escapeHtml;
 
+////////////////////////////////
 
 let bannerAd = null;
 let interstitialAd = null;
@@ -776,8 +1046,7 @@ document.addEventListener('deviceready', async () => {
     await admob.start();
     bannerAd = new admob.BannerAd({
         adUnitId: 'ca-app-pub-3940256099942544/6300978111',
-        position: 'bottom',
-        size : 'BANNER'
+        position: 'bottom'
       
     });
     await bannerAd.show();
