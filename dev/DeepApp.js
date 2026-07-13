@@ -220,7 +220,7 @@ function openReportModal(groupId) {
     });
     
     document.getElementById('report-modal').classList.add('active');
-    lockBodyScroll('modal'); // ✅ Add this line
+    lockBodyScroll('modal'); 
 }
 function closeReportModal() {
     document.getElementById('report-modal').classList.remove('active');
@@ -304,9 +304,7 @@ function setButtonLoading(button, isLoading) {
         if (button.dataset.originalText) {
             button.innerHTML = button.dataset.originalText;
             delete button.dataset.originalText;
-        }
-    }
-}
+        }}}
 function selectReportReason(button, reason) {
     const textarea = document.getElementById('report-feedback');
     
@@ -317,6 +315,8 @@ function selectReportReason(button, reason) {
     
     const messages = {
         spam: 'This group appears to be spamming or sending unsolicited messages.',
+        icon: 'This group contains copyrighted icon.',
+        contents: 'This group have changed its contents after approval and now contains contents against HeartLink rules.',
         inappropriate: 'This group contains inappropriate or offensive content.',
         fake: 'This group appears to be fake or impersonating another group.',
         hate: 'This group contains hate speech or discriminatory content.',
@@ -331,32 +331,13 @@ function selectReportReason(button, reason) {
         textarea.focus();
     }}
 
-function formatDate(date) {
-    const now = new Date();
-    const diff = now - date;
-    
-    if (diff < 60 * 1000) return 'Just now';
-    if (diff < 60 * 60 * 1000) {
-        const minutes = Math.floor(diff / (60 * 1000));
-        return `${minutes}m ago`;
-    }
-    if (diff < 24 * 60 * 60 * 1000) {
-        const hours = Math.floor(diff / (60 * 60 * 1000));
-        return `${hours}h ago`;
-    }
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-        const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-        return `${days}d ago`;
-    }
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+function formatDate(date) { const now = new Date();  const diff = now - date; if (diff < 60 * 1000) return 'Just now'; if (diff < 60 * 60 * 1000) { const minutes = Math.floor(diff / (60 * 1000)); return `${minutes}m ago`;} if (diff < 24 * 60 * 60 * 1000) { const hours = Math.floor(diff / (60 * 60 * 1000));  return `${hours}h ago`;}if (diff < 7 * 24 * 60 * 60 * 1000) { const days = Math.floor(diff / (24 * 60 * 60 * 1000)); return `${days}d ago`;} return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });}
 
 function createEmptyState() {
     const messages = {
         featured: 'Explore Groups section or check back later!',
         new: 'No user-added groups yet. Be the first to add one!',
-        bookmarks: 'No bookmarked groups yet. Browse groups and tap the bookmark icon to save them here!'
-    };
+        bookmarks: 'No bookmarked groups yet. Browse groups and tap the bookmark icon to save them here. Bookmark help you keep your choosen groups separate from other groups!'};
 
     return `
         <div class="empty-state">
@@ -364,23 +345,19 @@ function createEmptyState() {
                 ${state.activeTab === 'bookmarks' ? 
                     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:40px;height:40px;">
                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                    </svg>` :
-                    icons.group
-                }
-            </div>
-            <h3 class="empty-title">${state.activeTab === 'bookmarks' ? 'No Bookmarks' : 'No Groups Found'}</h3>
-            <p class="empty-text">
-                ${messages[state.activeTab] || 'No groups available at the moment.'}
-            </p>
-        </div>
-    `;
-}
+</svg>` :
+icons.group}
+</div>
+<h3 class="empty-title">${state.activeTab === 'bookmarks' ? 'No Bookmarks' : 'No Groups Found'}</h3>
+<p class="empty-text">
+${messages[state.activeTab] || 'No groups available at the moment.'}
+</p>
+</div>
+`;}
 
 function renderGroupsBody() {
     const filteredGroups = getFilteredGroups();
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
-    
-    // Update bookmark count
     BookmarkManager.updateBookmarkCount();
 
     return `
@@ -438,11 +415,7 @@ function render() {
         }
         return;
     }
-    
-    if (state.isLoading) {
-        if (window.AppUI) window.AppUI.showShimmer(6);
-        return;
-    }
+if (state.isLoading) {if (window.AppUI) window.AppUI.showShimmer(6);return;}
     
     if (state.hasError) {
         if (window.AppUI) {
@@ -450,22 +423,15 @@ function render() {
                 'Slow or no internet connection. Please check your network and try again.',
                 () => subscribeToGroups()
             );
-        }
-        return;
-    }
+        }return;}
     if (window.AppUI) {
         const filteredGroups = getFilteredGroups();
-        window.AppUI.renderGroups(renderGroupsBody());
-    }
-}
+        window.AppUI.renderGroups(renderGroupsBody());}}
 
 function openAddModal() {
     document.getElementById('modal-title').textContent = 'Add New Group';
     document.getElementById('modal-submit-btn').textContent = 'submit for review';
-    
     document.getElementById('group-form').reset();
-    
-    // Reset category
     selectedCategory = '';
     document.getElementById('group-category').value = '';
     document.getElementById('category-placeholder').textContent = 'Select a category';
@@ -474,23 +440,21 @@ function openAddModal() {
     document.getElementById('group-country').value = '';
     document.getElementById('country-placeholder').textContent = 'Select a country';
     document.getElementById('country-placeholder').classList.remove('selected');
-
     const authorNameField = document.getElementById('author-name');
     if (authorNameField) {
-        const hasLockedName = !!state.userDisplayName;
-        authorNameField.value = state.userDisplayName || '';
-        authorNameField.disabled = hasLockedName;
-        document.querySelector('.author-input-section h4').textContent = 'Your Display Name';
-        document.querySelector('.author-info').textContent = hasLockedName
-            ? `Your display name is locked and can't be changed.`
-            : 'Set display name once, it will not change again.';}
+const hasLockedName = !!state.userDisplayName;
+authorNameField.value = state.userDisplayName || '';
+authorNameField.disabled = hasLockedName;
+document.querySelector('.author-input-section h4').textContent = '';
+document.querySelector('.author-info').textContent = hasLockedName
+? `Your display name is locked and can't be changed.`
+: 'Set your display name once, it will not change again.';}
 const indicator = document.getElementById('name-check-indicator');
 if (indicator) { indicator.className = 'name-check-indicator'; indicator.innerHTML = ''; }
 if (!state.userDisplayName && authorNameField) authorNameField.style.borderColor = '';
 nameAvailability = { name: '', available: null };
     document.getElementById('group-modal').classList.add('active');
     lockBodyScroll('modal'); 
-    
     if (typeof prepareInterstitial === 'function') prepareInterstitial();
 }
 
@@ -520,9 +484,7 @@ async function checkDuplicateGroupLink(link) {
         return existsInLive || !pendingSnap.empty;
     } catch (error) {
         console.error('Error checking duplicate link:', error);
-        return false;
-    }
-}
+        return false;}}
 
 async function isUrlBanned(link) {
     try {
@@ -537,9 +499,7 @@ async function isUrlBanned(link) {
         return { banned: false };
     } catch (error) {
         console.error('Error checking banned URL:', error);
-        return { banned: false };
-    }
-}
+        return { banned: false };}}
 
 function checkRateLimit(userIP) {
     const now = Date.now();
@@ -548,10 +508,9 @@ function checkRateLimit(userIP) {
     
     if (recentSubs.length >= 5) {
         return {
-            allowed: false,
-            message: 'Rate limit exceeded: Maximum 5 groups per hour'
-        };
-    }
+allowed: false,
+message: 'Rate limit exceeded: Maximum 5 groups per hour'
+};}
     
     if (recentSubs.length > 0) {
         const lastSubmission = recentSubs[recentSubs.length - 1];
@@ -802,8 +761,6 @@ async function checkDuplicateDisplayName(displayName) {
             console.log('Display name found in live groups:', displayName);
             return true;
         }
-        
-        // Check in pending groups directly from Firestore
         const pendingQuery = query(
             collection(db, 'pendingGroups'), 
             where('authorName', '==', displayName.trim())
@@ -1056,16 +1013,13 @@ let appOpenAd = null;
 let lastFullScreenAdAt = 0;
 const COOLDOWN_MS = 60 * 1000;
 
-function canShowFullScreenAd() {
-    return Date.now() - lastFullScreenAdAt > COOLDOWN_MS;
-}
+function canShowFullScreenAd() {return Date.now() - lastFullScreenAdAt > COOLDOWN_MS;}
 
-document.addEventListener('deviceready', async () => {
-    await admob.start();
-    bannerAd = new admob.BannerAd({
-        adUnitId: 'ca-app-pub-3940256099942544/6300978111',
-        position: 'bottom'
-      
+document.addEventListener('deviceready', async () => {await admob.start();
+  bannerAd = new admob.BannerAd({
+adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+  position: 'bottom',
+  size: 'BANNER'
     });
     await bannerAd.show();
     document.addEventListener('pause', () => bannerAd && bannerAd.hide());
