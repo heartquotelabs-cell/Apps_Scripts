@@ -434,6 +434,14 @@ function openAddModal() {
     document.getElementById('group-country').value = '';
     document.getElementById('country-placeholder').textContent = 'Select a country';
     document.getElementById('country-placeholder').classList.remove('selected');
+    const countrySel = document.getElementById('country-selector');
+    const categorySel = document.getElementById('category-selector');
+    const nameF = document.getElementById('group-name');
+    const linkF = document.getElementById('group-link');
+    if (countrySel) countrySel.style.borderColor = '';
+    if (categorySel) categorySel.style.borderColor = '';
+    if (nameF) nameF.style.borderColor = '';
+    if (linkF) linkF.style.borderColor = '';
     selectedIconUrl = '';
     document.getElementById('group-icon-url').value = '';
     if (typeof updateFinalIconPreview === 'function') updateFinalIconPreview('');
@@ -689,21 +697,38 @@ async function handleGroupSubmit(e) {
     authorName: authorName || 'Anonymous'
 };
 
+const countrySelector = document.getElementById('country-selector');
+const categorySelector = document.getElementById('category-selector');
+const nameField = document.getElementById('group-name');
+const linkField = document.getElementById('group-link');
+
 if (!groupData.country) {
     showToast('Please select a country', 'error');
-    return;}
+    if (countrySelector) countrySelector.style.borderColor = 'var(--danger)';
+    return;
+}
+if (countrySelector) countrySelector.style.borderColor = '';
 
-        if (!groupData.category) {
-            showToast('Please select a category', 'error');
-            return;}
-        if (!groupData.name || groupData.name.length < 3) {
-            showToast('Group name must be at least 3 characters', 'error');
-            return;
-        }
-        if (!groupData.link) {
-            showToast('WhatsApp link is required', 'error');
-            return;
-        }
+if (!groupData.category) {
+    showToast('Please select a category', 'error');
+    if (categorySelector) categorySelector.style.borderColor = 'var(--danger)';
+    return;
+}
+if (categorySelector) categorySelector.style.borderColor = '';
+
+if (!groupData.name || groupData.name.length < 3) {
+    showToast('Group name must be at least 3 characters', 'error');
+    if (nameField) nameField.style.borderColor = 'var(--danger)';
+    return;
+}
+if (nameField) nameField.style.borderColor = '';
+
+if (!groupData.link) {
+    showToast('WhatsApp link is required', 'error');
+    if (linkField) linkField.style.borderColor = 'var(--danger)';
+    return;
+}
+if (linkField) linkField.style.borderColor = '';
 
 const success = await addGroupWithSpamProtection(groupData);
 if (success) {
