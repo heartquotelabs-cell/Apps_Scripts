@@ -517,28 +517,19 @@ async function isUrlBanned(link) {
         return { banned: false };}}
 
 function checkRateLimit(userIP) {
-    const now = Date.now();
-    const userSubmissions = recentSubmissions.get(userIP) || [];
-    const recentSubs = userSubmissions.filter(time => now - time < 60 * 60 * 1000);
-    
-    if (recentSubs.length >= 5) {
-        return {
+const now = Date.now();
+const userSubmissions = recentSubmissions.get(userIP) || [];
+const recentSubs = userSubmissions.filter(time => now - time < 60 * 60 * 1000);
+if (recentSubs.length >= 5) {
+return {
 allowed: false,
-message: 'Rate limit exceeded: Maximum 5 groups per hour'
-};}
-    
+message: 'limit exceeded: Maximum 5 groups per hour'};}
     if (recentSubs.length > 0) {
         const lastSubmission = recentSubs[recentSubs.length - 1];
         if (now - lastSubmission < 30 * 1000) {
-            return {
-                allowed: false,
-                message: 'Please wait 30 seconds before adding another group'
-            };
-        }
-    }
-    
-    return { allowed: true };
-}
+return {
+allowed: false,
+message: 'Please wait 30 seconds before adding another group'};}}return { allowed: true };}
 
 function normalizeWhatsAppLink(link) {
     if (!link) return '';
@@ -735,16 +726,12 @@ if (success) {
 document.getElementById('group-modal').classList.remove('active');
 setTimeout(() => { checkAndUnlockBodyScroll(); }, 200);
 if (typeof showInterstitialAfterSubmit === 'function') {
-setTimeout(() => { showInterstitialAfterSubmit(); }, 500);
-            }
-        }
-    } catch (error) {
-        console.error('Error submitting group:', error);
-        showToast('Failed to submit group. Please try again.', 'error');
+setTimeout(() => { showInterstitialAfterSubmit(); }, 500);}}} catch (error) {
+console.error('Error submitting group:', error);
+showToast('Failed to submit group. Please try again.', 'error');
     } finally {
-        setButtonLoading(submitBtn, false);
-    }
-}
+setButtonLoading(submitBtn, false);
+    }}
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -1049,21 +1036,56 @@ function canShowFullScreenAd() {return Date.now() - lastFullScreenAdAt > COOLDOW
 
 document.addEventListener('deviceready', async () => {await admob.start();
   bannerAd = new admob.BannerAd({
-adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+adUnitId: 'ca-app-pub-5188642994982403/8665131063',
   position: 'bottom',
   size: 'BANNER'
     });
     await bannerAd.show();
     document.addEventListener('pause', () => bannerAd && bannerAd.hide());
     document.addEventListener('resume', () => bannerAd && bannerAd.show());
-    appOpenAd = new admob.AppOpenAd({ adUnitId: 'ca-app-pub-3940256099942544/9257395921' });
+    appOpenAd = new admob.AppOpenAd({ adUnitId: 'ca-app-pub-5188642994982403/6262594934' });
     await appOpenAd.load();
     document.addEventListener('resume', async () => { if (!canShowFullScreenAd()) return; if (!(await appOpenAd.show())) { await appOpenAd.load(); } else { lastFullScreenAdAt = Date.now(); } });}, false);
 function prepareInterstitial() {
-    interstitialAd = new admob.InterstitialAd({ adUnitId: 'ca-app-pub-3940256099942544/1033173712' });
+    interstitialAd = new admob.InterstitialAd({ adUnitId: 'ca-app-pub-5188642994982403/7375386113' });
     interstitialAd.load();}
-async function showInterstitialAfterSubmit() {
-    if (!interstitialAd) return;
-    if (!canShowFullScreenAd()) return;
-    if (await interstitialAd.show()) {
-        lastFullScreenAdAt = Date.now();}}
+async function
+ showInterstitialAfterSubmit() {
+if (!interstitialAd) return;
+if (!canShowFullScreenAd()) return;
+if (await interstitialAd.show()) {
+lastFullScreenAdAt = Date.now();}}
+
+const promo = document.getElementById('mypromo');
+promo.style.cssText = 'display:none;width:100%; background: var(--card-header);border-radius: var(--radius-lg);box-shadow: var(--shadow-sm);border: .5px solid var(--border);transition: var(--transition);margin-top: 5px;margin-bottom: 10px;padding: 5px;';
+const promobanner = document.createElement('div');
+promobanner.style.cssText = 
+'display:flex;align-items:center;justify-content:space-between;padding:5px;background: var(--bg-card);border-radius:12px;gap:12px; border: 1px solid var(--border-light);width:100%;';
+const left = document.createElement('div');
+left.style.cssText = 'display:flex;align-items:center;gap:12px;';
+const img = document.createElement('img');
+img.src = 'hq.jpg';
+img.width = 40;
+img.className = 'promoImg'
+img.height = 40;
+img.style.borderRadius = '10px';
+const textWrap = document.createElement('div');
+textWrap.style.cssText = 'display:flex;flex-direction:column;gap:0px;';
+const appName = document.createElement('div');
+appName.textContent = 'Heartquote';
+appName.style.cssText = 'font-size:13px;font-weight:bold;color: var(--text-primary);';
+const desc = document.createElement('div');
+desc.textContent = 'Offline quotes and poetry in 7 languages';
+desc.style.cssText = 'font-size:10px;color: var(--text-secondary); overflow-wrap:break-word;';
+const btn = document.createElement('button');
+btn.textContent = 'Install';
+btn.className   = 'promoBtn';
+btn.style.cssText = 'background: var(--tab-active-bg);border:var(--border);padding:8px 20px;border-radius:20px;font-weight:bold;color: var(--white);cursor:pointer;flex-shrink:0; box-shadow: 0 0 0 1px var(--card-bg), 0 0 0 2px var(--tab-active-bg);  ';
+btn.onclick = () => window.open('https://play.google.com/store/apps/details?id=com.heartquote', '_blank');
+textWrap.appendChild(appName);
+textWrap.appendChild(desc);
+left.appendChild(img);
+left.appendChild(textWrap);
+promobanner.appendChild(left);
+promobanner.appendChild(btn);
+promo.appendChild(promobanner);
