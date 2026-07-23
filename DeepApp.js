@@ -764,10 +764,50 @@ function initWhatsAppApp() {
   setupDisplayNameLiveCheck();
 }
 
+function initPromo() {
+    const promo = document.getElementById('mypromo');
+    if (!promo) return;
+
+    promo.style.cssText = 'display:none;width:100%; background: var(--card-header);border-radius: var(--radius-lg);box-shadow: var(--shadow-sm);border: .5px solid var(--border);transition: var(--transition);margin-top: 5px;margin-bottom: 10px;padding: 5px;';
+    const promobanner = document.createElement('div');
+    promobanner.style.cssText = 
+    'display:flex;align-items:center;justify-content:space-between;padding:5px;background: var(--bg-card);border-radius:12px;gap:12px; border: 1px solid var(--border-light);width:100%;';
+    const left = document.createElement('div');
+    left.style.cssText = 'display:flex;align-items:center;gap:12px;';
+    const img = document.createElement('img');
+    img.src = 'hq.jpg';
+    img.width = 40;
+    img.className = 'promoImg';
+    img.height = 40;
+    img.style.borderRadius = '10px';
+    const textWrap = document.createElement('div');
+    textWrap.style.cssText = 'display:flex;flex-direction:column;gap:0px;';
+    const appName = document.createElement('div');
+    appName.textContent = 'Heartquote';
+    appName.style.cssText = 'font-size:13px;font-weight:bold;color: var(--text-primary);';
+    const desc = document.createElement('div');
+    desc.textContent = 'Offline quotes and poetry in 7 languages';
+    desc.style.cssText = 'font-size:10px;color: var(--text-secondary); overflow-wrap:break-word;';
+    const btn = document.createElement('button');
+    btn.textContent = 'Install';
+    btn.className = 'promoBtn';
+    btn.style.cssText = 'background: var(--tab-active-bg);border:var(--border);padding:8px 20px;border-radius:20px;font-weight:bold;color: var(--white);cursor:pointer;flex-shrink:0; box-shadow: 0 0 0 1px var(--card-bg), 0 0 0 2px var(--tab-active-bg);';
+    btn.onclick = () => window.open('https://play.google.com/store/apps/details?id=com.heartquote', '_blank');
+    textWrap.appendChild(appName);
+    textWrap.appendChild(desc);
+    left.appendChild(img);
+    left.appendChild(textWrap);
+    promobanner.appendChild(left);
+    promobanner.appendChild(btn);
+    promo.appendChild(promobanner);
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initWhatsAppApp);
+    document.addEventListener('DOMContentLoaded', initPromo);
 } else {
     initWhatsAppApp();
+    initPromo();
 }
 async function checkDuplicateDisplayName(displayName) {
     try {
@@ -1055,37 +1095,3 @@ if (!interstitialAd) return;
 if (!canShowFullScreenAd()) return;
 if (await interstitialAd.show()) {
 lastFullScreenAdAt = Date.now();}}
-
-const promo = document.getElementById('mypromo');
-promo.style.cssText = 'display:none;width:100%; background: var(--card-header);border-radius: var(--radius-lg);box-shadow: var(--shadow-sm);border: .5px solid var(--border);transition: var(--transition);margin-top: 5px;margin-bottom: 10px;padding: 5px;';
-const promobanner = document.createElement('div');
-promobanner.style.cssText = 
-'display:flex;align-items:center;justify-content:space-between;padding:5px;background: var(--bg-card);border-radius:12px;gap:12px; border: 1px solid var(--border-light);width:100%;';
-const left = document.createElement('div');
-left.style.cssText = 'display:flex;align-items:center;gap:12px;';
-const img = document.createElement('img');
-img.src = 'hq.jpg';
-img.width = 40;
-img.className = 'promoImg'
-img.height = 40;
-img.style.borderRadius = '10px';
-const textWrap = document.createElement('div');
-textWrap.style.cssText = 'display:flex;flex-direction:column;gap:0px;';
-const appName = document.createElement('div');
-appName.textContent = 'Heartquote';
-appName.style.cssText = 'font-size:13px;font-weight:bold;color: var(--text-primary);';
-const desc = document.createElement('div');
-desc.textContent = 'Offline quotes and poetry in 7 languages';
-desc.style.cssText = 'font-size:10px;color: var(--text-secondary); overflow-wrap:break-word;';
-const btn = document.createElement('button');
-btn.textContent = 'Install';
-btn.className   = 'promoBtn';
-btn.style.cssText = 'background: var(--tab-active-bg);border:var(--border);padding:8px 20px;border-radius:20px;font-weight:bold;color: var(--white);cursor:pointer;flex-shrink:0; box-shadow: 0 0 0 1px var(--card-bg), 0 0 0 2px var(--tab-active-bg);  ';
-btn.onclick = () => window.open('https://play.google.com/store/apps/details?id=com.heartquote', '_blank');
-textWrap.appendChild(appName);
-textWrap.appendChild(desc);
-left.appendChild(img);
-left.appendChild(textWrap);
-promobanner.appendChild(left);
-promobanner.appendChild(btn);
-promo.appendChild(promobanner);
