@@ -398,7 +398,13 @@ function createEmptyState() {
     const messages = {
         featured: 'Explore Groups section or check back later!',
         new: 'No user-added groups yet. Be the first to add one!',
-        bookmarks: 'No bookmarked groups yet. Bookmark help you keep your choosen groups separate from other groups!'};
+        channels: 'No channels yet. Be the first to add one!',
+        bookmarks: 'No bookmarked items yet. Bookmark helps you keep your chosen groups and channels separate from the rest!'};
+
+    const titles = {
+        bookmarks: 'No Bookmarks',
+        channels: 'No Channels Found'
+    };
 
     return `
 <div class="empty-state">
@@ -409,7 +415,7 @@ ${state.activeTab === 'bookmarks' ?
 </svg>` :
 icons.group}
 </div>
-<h3 class="empty-title">${state.activeTab === 'bookmarks' ? 'No Bookmarks' : 'No Groups Found'}</h3>
+<h3 class="empty-title">${titles[state.activeTab] || 'No Groups Found'}</h3>
 <p class="empty-text">
 ${messages[state.activeTab] || 'No groups available at the moment.'}
 </p>
@@ -492,6 +498,7 @@ document.getElementById('group-modal').classList.remove('channel-mode');
 document.getElementById('modal-title').textContent = 'Add New Group';
 document.querySelector('label[for="group-name"]').textContent = 'Group Name';
 document.querySelector('label[for="group-link"]').textContent = 'Group Link';
+  document.querySelector('label[for="group-description"]').textContent = 'Group description...'; 
     selectedCategory = '';
     document.getElementById('group-category').value = '';
     document.getElementById('category-placeholder').textContent = 'Select a category';
@@ -546,7 +553,7 @@ function openAddChannelModal() {
     document.getElementById('group-modal').classList.add('channel-mode');
     document.querySelector('label[for="group-name"]').textContent = 'Channel Name';
     document.querySelector('label[for="group-link"]').textContent = 'Channel Link';
-
+document.querySelector('label[for="group-description"]').textContent = 'Channel description...';
     selectedIconUrl = '';
     document.getElementById('group-icon-url').value = '';
     if (typeof updateFinalIconPreview === 'function') updateFinalIconPreview('');
