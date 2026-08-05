@@ -95,37 +95,6 @@ function subscribeToGroups() {
             render();
         }
     );
-    const sponsorsRef = doc(db, 'liveData', 'sponsors');
-onSnapshot(sponsorsRef, (docSnap) => {
-    state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
-    renderPromo();
-});
-
-function renderPromo() {
-    const promoDiv = document.getElementById('mypromo');
-    if (!promoDiv || !state.sponsors.length) return;
-    const sponsor = state.sponsors[0]; // Show the first (most recent) sponsor
-    promoDiv.innerHTML = `
-        <div class="sponsor-card">
-            ${sponsor.cover ? `<img src="${escapeHtml(sponsor.cover)}" alt="" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px 8px 0 0;">` : ''}
-            <div style="padding: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        ${sponsor.icon ? `<img src="${escapeHtml(sponsor.icon)}" alt="" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;">` : ''}
-                        <div>
-                            <h4 style="margin: 0; font-size: 0.9rem; font-weight: 600;">${escapeHtml(sponsor.name)}</h4>
-                            <span style="font-size: 0.65rem; color: var(--text-secondary);">Sponsored</span>
-                        </div>
-                    </div>
-                </div>
-                ${sponsor.description ? `<p style="margin: 0 0 10px; font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(sponsor.description)}</p>` : ''}
-                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 6px 12px; background: var(--primary); color: #fff; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">
-                    Get on Play Store
-                </a>
-            </div>
-        </div>
-    `;
-}
     return unsubscribeGroups;}
 function subscribeToChannels() {
     if (unsubscribeChannels) { unsubscribeChannels(); unsubscribeChannels = null; }
@@ -1030,6 +999,37 @@ function initWhatsAppApp() {
     render();
     subscribeToGroups();
   setupDisplayNameLiveCheck();
+      const sponsorsRef = doc(db, 'liveData', 'sponsors');
+onSnapshot(sponsorsRef, (docSnap) => {
+    state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
+    renderPromo();
+});
+
+function renderPromo() {
+    const promoDiv = document.getElementById('mypromo');
+    if (!promoDiv || !state.sponsors.length) return;
+    const sponsor = state.sponsors[0]; // Show the first (most recent) sponsor
+    promoDiv.innerHTML = `
+        <div class="sponsor-card">
+            ${sponsor.cover ? `<img src="${escapeHtml(sponsor.cover)}" alt="" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px 8px 0 0;">` : ''}
+            <div style="padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        ${sponsor.icon ? `<img src="${escapeHtml(sponsor.icon)}" alt="" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;">` : ''}
+                        <div>
+                            <h4 style="margin: 0; font-size: 0.9rem; font-weight: 600;">${escapeHtml(sponsor.name)}</h4>
+                            <span style="font-size: 0.65rem; color: var(--text-secondary);">Sponsored</span>
+                        </div>
+                    </div>
+                </div>
+                ${sponsor.description ? `<p style="margin: 0 0 10px; font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(sponsor.description)}</p>` : ''}
+                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 6px 12px; background: var(--primary); color: #fff; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">
+                    Get on Play Store
+                </a>
+            </div>
+        </div>
+    `;
+}
 }
 
 function initPromo() {
