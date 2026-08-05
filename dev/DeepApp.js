@@ -231,6 +231,8 @@ function createChannelCard(channel) {
         </svg>
     `;
 
+const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+
     return `
         <div class="group-card">
             <div class="card-header">
@@ -240,9 +242,10 @@ function createChannelCard(channel) {
                     </div>
                     <div class="header-text">
                         <h3 class="group-name">${escapeHtml(channel.name)}</h3>
+                        <div class="group-author"><span>CHANNEL</span></div>
                     </div>
                 </div>
-                <span class="type-badge channel">Channel</span>
+                <span class="type-badge featured">${verifiedIcon} Verified</span>
             </div>
             <p class="group-description">${escapeHtml(channel.description || 'No description available')}</p>
             <div class="card-footer">
@@ -272,10 +275,9 @@ function openReportModal(itemId, type = 'group') {
     const group = source.find(g => g.id === itemId);
     if (!group) return;
     currentReportType = type;
+    currentReportGroup = itemId;
 
-    currentReportGroup = groupId;
-
-    document.getElementById('report-group-id').value = groupId;
+    document.getElementById('report-group-id').value = itemId;
     document.getElementById('report-group-name').textContent = group.name;
     document.getElementById('report-group-link').textContent = group.link;
     document.getElementById('report-feedback').value = '';
@@ -300,7 +302,7 @@ function closeReportModalOnOverlay(e) {
 async function submitReport(e) {
     e.preventDefault();
     
-    const groupId = document.getElementById('report-group-id').value;
+    const itemId = document.getElementById('report-group-id').value;
     const feedback = document.getElementById('report-feedback').value.trim();
     const email = document.getElementById('report-email').value.trim();
     
@@ -308,8 +310,8 @@ async function submitReport(e) {
         showToast('Please provide a reason for reporting', 'error');
         return;
     }
-    if (!groupId) {
-        showToast('Invalid group', 'error');
+    if (!itemId) {
+        showToast('Invalid item', 'error');
         return;
     }
 
@@ -317,27 +319,31 @@ async function submitReport(e) {
     setButtonLoading(submitBtn, true);
 
     try {
-        const liveRef = doc(db, 'liveData', 'groups');
+        const isChannel = currentReportType === 'channel';
+        const liveRef = doc(db, 'liveData', isChannel ? 'channels' : 'groups');
+        const fieldKey = isChannel ? 'channels' : 'groups';
+
         await runTransaction(db, async (transaction) => {
             const snap = await transaction.get(liveRef);
-            const groups = snap.exists() ? (snap.data().groups || []) : [];
-            const idx = groups.findIndex(g => g.id === groupId);
-            if (idx === -1) throw new Error('Group not found');
+            const items = snap.exists() ? (snap.data()[fieldKey] || []) : [];
+            const idx = items.findIndex(g => g.id === itemId);
+            if (idx === -1) throw new Error(isChannel ? 'Channel not found' : 'Group not found');
 
-            groups[idx] = {
-                ...groups[idx],
+            items[idx] = {
+                ...items[idx],
                 reported: true,
-                reportCount: (groups[idx].reportCount || 0) + 1,
+                reportCount: (items[idx].reportCount || 0) + 1,
                 reportedByName: 'Anonymous User',
                 reportedByEmail: email || null,
                 reportReason: feedback,
                 lastReported: Date.now()
             };
-            transaction.set(liveRef, { groups });
+            transaction.set(liveRef, { [fieldKey]: items });
         });
 
         await addDoc(collection(db, 'reports'), {
-            groupId: groupId,
+            groupId: itemId,
+            itemType: currentReportType,
             groupName: document.getElementById('report-group-name').textContent,
             groupLink: document.getElementById('report-group-link').textContent,
             reportedByName: 'Anonymous',
