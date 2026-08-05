@@ -467,8 +467,29 @@ function renderGroupsBody() {
         </div>
 
         <div class="groups-grid">
-            ${filteredGroups.length === 0 ? createEmptyState() :
-              filteredGroups.map(g => g.type === 'channel' ? createChannelCard(g) : createGroupCard(g)).join('')}
+            ${(() => {
+                const items = filteredGroups;
+                let html = '';
+
+      if (state.sponsors.length > 0 && state.activeTab !== 'bookmarks') {
+    html += createSponsorCard(state.sponsors[0]);
+       }
+      if (items.length === 0) {
+       html += createEmptyState();
+             } else {
+       html += items.map((g, idx) => {
+  let card = (g.type === 'channel' && typeof window.createChannelCard === 'function') 
+     ? window.createChannelCard(g) 
+    : (typeof createGroupCard === 'function' ? createGroupCard(g) : window.createGroupCard(g));
+    if (state.sponsors.length > 1 && (idx + 1) % 4 === 0 && state.activeTab !== 'bookmarks') {
+   const sponsorIdx = Math.floor((idx + 1) / 4) % state.sponsors.length;
+      card += createSponsorCard(state.sponsors[sponsorIdx]);
+            }
+          return card;
+                    }).join('');
+                }
+                return html;
+            })()}
         </div>
     `;
 }
@@ -1005,26 +1026,27 @@ onSnapshot(sponsorsRef, (docSnap) => {
     renderPromo();
 });
 
-function renderPromo() {
-    const promoDiv = document.getElementById('mypromo');
-    if (!promoDiv || !state.sponsors.length) return;
-    const sponsor = state.sponsors[0]; // Show the first (most recent) sponsor
-    promoDiv.innerHTML = `
-        <div class="sponsor-card">
-            ${sponsor.cover ? `<img src="${escapeHtml(sponsor.cover)}" alt="" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px 8px 0 0;">` : ''}
-            <div style="padding: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        ${sponsor.icon ? `<img src="${escapeHtml(sponsor.icon)}" alt="" style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;">` : ''}
-                        <div>
-                            <h4 style="margin: 0; font-size: 0.9rem; font-weight: 600;">${escapeHtml(sponsor.name)}</h4>
-                            <span style="font-size: 0.65rem; color: var(--text-secondary);">Sponsored</span>
-                        </div>
+function createSponsorCard(sponsor) {
+    return `
+        <div class="group-card sponsor-card">
+            <div style="position: relative; overflow: hidden; border-radius: 12px 12px 0 0;">
+                ${sponsor.cover ? `<img src="${escapeHtml(sponsor.cover)}" alt="" style="width: 100%; height: 140px; object-fit: cover;">` : `<div style="width: 100%; height: 140px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-weight: 600; font-size: 0.9rem;">Sponsored App</span></div>`}
+                <span style="position: absolute; top: 8px; right: 8px; background: #FFD700; color: #000; padding: 4px 10px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px;">SPONSORED</span>
+            </div>
+            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 10px;">
+                    ${sponsor.icon ? `<img src="${escapeHtml(sponsor.icon)}" alt="" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover; flex-shrink: 0;">` : ''}
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0; font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">${escapeHtml(sponsor.name)}</h4>
+                        <p style="margin: 2px 0 0; font-size: 0.7rem; color: var(--text-secondary);">Available on Google Play</p>
                     </div>
                 </div>
-                ${sponsor.description ? `<p style="margin: 0 0 10px; font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(sponsor.description)}</p>` : ''}
-                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 6px 12px; background: var(--primary); color: #fff; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none;">
-                    Get on Play Store
+                ${sponsor.description ? `<p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">${escapeHtml(sponsor.description)}</p>` : ''}
+            </div>
+            <div class="card-footer">
+                <span style="flex: 1; padding: 12px; font-size: 0.75rem; color: var(--text-secondary);">Partner</span>
+                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn" style="flex: 1; text-align: center;">
+                    <span>Install</span>
                 </a>
             </div>
         </div>
