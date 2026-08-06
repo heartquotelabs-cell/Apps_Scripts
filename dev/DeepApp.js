@@ -292,28 +292,30 @@ const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width
 }
 function createSponsorCard(sponsor) {
     return `
-        <div class="group-card sponsor-card">
-<div class="card-header sponsor-header">
-<div class="header-left sponsor-header-left">
-${sponsor.icon ? `<div class="group-icon"><img src="${escapeHtml(sponsor.icon)}" alt="" onerror="this.style.display='none';"></div>` : ''}
-<div class="header-text">
-<h3 class="group-name">${escapeHtml(sponsor.name)}</h3>
-<div class="sponsor-label">Sponsored Ad</div>
-</div>
-</div>
-</div>
-<p class="group-description sponsor-description">${escapeHtml(sponsor.description || 'Check out this amazing app')}</p>
-${sponsor.cover ? `<img src="${escapeHtml(sponsor.cover)}" alt="" class="sponsor-cover">` : ''}
-<div class="card-meta-row sponsor-meta-row">
-<span class="meta-left sponsor-play-badge">
-Available on Google Play
+        <div class="sponsor-card">
+            <div class="sponsor-image-wrapper">
+                ${sponsor.cover ? `<img class="sponsor-main-img" src="${escapeHtml(sponsor.cover)}" alt="" loading="lazy" onerror="this.style.display='none';">` : `<div class="sponsor-main-img sponsor-cover-fallback"></div>`}
+                ${sponsor.icon ? `<img class="sponsor-avatar-overlay" src="${escapeHtml(sponsor.icon)}" alt="" loading="lazy" onerror="this.style.display='none';">` : ''}
+            </div>
+            <div class="sponsor-header-row">
+                <div class="sponsor-title-group">
+                    <h3 class="sponsor-app-title">${escapeHtml(sponsor.name)}</h3>
+<span class="sponsor-ad-label">
+    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    Sponsored
 </span>
+   <span class="sponsor-app-desc">${escapeHtml(sponsor.description || 'Check out this amazing app')}</span>
+                    <span class="sponsor-title-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+                        Available on Google Play
+                    </span>
+                </div>
             </div>
-<div class="card-footer sponsor-footer">
-<a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn sponsor-install-btn">
-Install
-                </a>
-            </div>
+            <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="sponsor-install-btn">Install Now</a>
         </div>
     `;
 }
