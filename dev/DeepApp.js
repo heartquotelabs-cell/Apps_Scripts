@@ -1390,4 +1390,4 @@ async function
 if (!interstitialAd) return;
 if (!canShowFullScreenAd()) return;
 if (await interstitialAd.show()) {
-lastFullScreenAdAt = Date.now();}}
+lastFullScreenAdAt = Date.now();}} 
