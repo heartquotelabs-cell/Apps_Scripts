@@ -116,17 +116,38 @@ function getUserGroups() {
     return state.groups.filter(group => group.type === 'user');}
 
 function getFilteredGroups() {
+    let items = [];
+    
     switch(state.activeTab) {
         case 'featured':
-            return state.groups.filter(group => group.type === 'featured' || group.type === 'admin');
+            items = state.groups.filter(group => group.type === 'featured' || group.type === 'admin');
+            break;
         case 'new':
-            return state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
+            items = state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
+            break;
         case 'channels':
-            return state.channels;
+            items = state.channels;
+            break;
         case 'bookmarks':
             return (window.BookmarkManager ? window.BookmarkManager.getBookmarkedItems(state.groups, state.channels) : []);
         default:
-            return [];}}
+            return [];
+    }
+    
+    if ((state.activeTab === 'featured' || state.activeTab === 'new') && state.sponsors && state.sponsors.length > 0) {
+        const sponsorsWithType = state.sponsors.map(s => ({ ...s, type: 'sponsor' }));
+        items = [...items, ...sponsorsWithType];
+        
+        // Sort by createdAt (sponsors have createdAt, groups have createdAt or use 0)
+        items.sort((a, b) => {
+            const timeA = a.createdAt || 0;
+            const timeB = b.createdAt || 0;
+            return timeB - timeA; // Most recent first
+        });
+    }
+    
+    return items;
+}
 
 function createGroupCard(group) {
     const isAdminGroup = group.type === 'featured';
@@ -467,29 +488,11 @@ function renderGroupsBody() {
         </div>
 
         <div class="groups-grid">
-            ${(() => {
-                const items = filteredGroups;
-                let html = '';
-
-      if (state.sponsors.length > 0 && state.activeTab !== 'bookmarks') {
-    html += createSponsorCard(state.sponsors[0]);
-       }
-      if (items.length === 0) {
-       html += createEmptyState();
-             } else {
-       html += items.map((g, idx) => {
-  let card = (g.type === 'channel' && typeof window.createChannelCard === 'function') 
-     ? window.createChannelCard(g) 
-    : (typeof createGroupCard === 'function' ? createGroupCard(g) : window.createGroupCard(g));
-    if (state.sponsors.length > 1 && (idx + 1) % 4 === 0 && state.activeTab !== 'bookmarks') {
-   const sponsorIdx = Math.floor((idx + 1) / 4) % state.sponsors.length;
-      card += createSponsorCard(state.sponsors[sponsorIdx]);
-            }
-          return card;
-                    }).join('');
-                }
-                return html;
-            })()}
+            ${filteredGroups.length === 0 ? createEmptyState() :
+              filteredGroups.map(g => (g.type === 'channel' && typeof window.createChannelCard === 'function') 
+                  ? window.createChannelCard(g) 
+                  : (g.type === 'sponsor' ? createSponsorCard(g) : createGroupCard(g))
+              ).join('')}
         </div>
     `;
 }
@@ -1029,23 +1032,29 @@ onSnapshot(sponsorsRef, (docSnap) => {
 function createSponsorCard(sponsor) {
     return `
         <div class="group-card sponsor-card">
-            <div style="position: relative; overflow: hidden; border-radius: 12px 12px 0 0;">
-                ${sponsor.cover ? `<img src="${escapeHtml(sponsor.cover)}" alt="" style="width: 100%; height: 140px; object-fit: cover;">` : `<div style="width: 100%; height: 140px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;"><span style="color: #fff; font-weight: 600; font-size: 0.9rem;">Sponsored App</span></div>`}
-                <span style="position: absolute; top: 8px; right: 8px; background: #FFD700; color: #000; padding: 4px 10px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px;">SPONSORED</span>
-            </div>
-            <div style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; gap: 10px;">
-                    ${sponsor.icon ? `<img src="${escapeHtml(sponsor.icon)}" alt="" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover; flex-shrink: 0;">` : ''}
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0; font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">${escapeHtml(sponsor.name)}</h4>
-                        <p style="margin: 2px 0 0; font-size: 0.7rem; color: var(--text-secondary);">Available on Google Play</p>
+            <div class="card-header">
+                <div class="header-left">
+                    ${sponsor.icon ? `<div class="group-icon"><img src="${escapeHtml(sponsor.icon)}" alt="" onerror="this.style.display='none';"></div>` : ''}
+                    <div class="header-text">
+                        <h3 class="group-name">${escapeHtml(sponsor.name)}</h3>
                     </div>
                 </div>
-                ${sponsor.description ? `<p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">${escapeHtml(sponsor.description)}</p>` : ''}
+                <span class="type-badge sponsor">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right: 4px;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                    </svg>
+                    Sponsored
+                </span>
             </div>
-            <div class="card-footer">
-                <span style="flex: 1; padding: 12px; font-size: 0.75rem; color: var(--text-secondary);">Partner</span>
-                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn" style="flex: 1; text-align: center;">
+            <p class="group-description">${escapeHtml(sponsor.description || 'Check out this amazing app')}</p>
+            <div class="card-meta-row" style="border: none; padding: 0 18px 12px; margin: 0;">
+                <span class="meta-left" style="background: rgba(13, 110, 253, 0.1); color: var(--tab-active-bg);">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M17.6915026,8.4744115 L21.545337,3.33471683 C21.7634177,3.03271872 21.5421564,2.61558348 21.1904951,2.61558348 C20.8650848,2.61558348 20.5924093,2.81213436 20.4744913,3.1165502 L17.1744913,8.6563168 C16.5893899,8.41395349 15.9345098,8.28302592 15.247214,8.28302592 C14.5605151,8.28302592 13.9135878,8.41395349 13.3284864,8.6563168 L10.0284864,3.1165502 C9.91066838,2.81213436 9.63799286,2.61558348 9.31258249,2.61558348 C8.96091771,2.61558348 8.73965635,3.03271872 8.95773705,3.33471683 L12.8114706,8.4744115 C11.2049458,9.84256436 10.247214,11.8211991 10.247214,14.0821596 C10.247214,14.5022557 10.2732286,14.9168022 10.3231201,15.324842 L4.88360024,15.324842 L4.88360024,16.7118506 L10.5139516,16.7118506 C10.9738405,17.8626747 11.8311798,18.8200652 12.9288394,19.3254625 C11.9159636,19.8215215 11.1258677,20.6357508 10.7127749,21.6380046 C10.3231201,20.6357508 9.53301416,19.8215215 8.52013838,19.3254625 C9.6178031,18.8200652 10.4751365,17.8626747 10.9350254,16.7118506 L5.86360024,16.7118506 L5.86360024,15.324842 L11.4238584,15.324842 C11.4737499,14.9168022 11.4997644,14.5022557 11.4997644,14.0821596 C11.4997644,12.2909093 10.9603864,10.6297169 10.0335417,9.29638998 Z"/></svg>
+                    Available on Google Play
+                </span>
+            </div>
+            <div class="card-footer" style="padding: 0;">
+                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn" style="background: var(--tab-active-bg); width: 100%; border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);">
                     <span>Install</span>
                 </a>
             </div>
