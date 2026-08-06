@@ -290,6 +290,38 @@ const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width
         </div>
     `;
 }
+function createSponsorCard(sponsor) {
+    return `
+        <div class="group-card sponsor-card">
+            <div class="card-header">
+                <div class="header-left">
+                    ${sponsor.icon ? `<div class="group-icon"><img src="${escapeHtml(sponsor.icon)}" alt="" onerror="this.style.display='none';"></div>` : ''}
+                    <div class="header-text">
+                        <h3 class="group-name">${escapeHtml(sponsor.name)}</h3>
+                    </div>
+                </div>
+                <span class="type-badge sponsor">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right: 4px;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                    </svg>
+                    Sponsored Ad
+                </span>
+            </div>
+            <p class="group-description">${escapeHtml(sponsor.description || 'Check out this amazing app')}</p>
+            <div class="card-meta-row" style="border: none; padding: 0 18px 12px; margin: 0;">
+                <span class="meta-left" style="background: rgba(13, 110, 253, 0.1); color: var(--tab-active-bg);">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M17.6915026,8.4744115 L21.545337,3.33471683 C21.7634177,3.03271872 21.5421564,2.61558348 21.1904951,2.61558348 C20.8650848,2.61558348 20.5924093,2.81213436 20.4744913,3.1165502 L17.1744913,8.6563168 C16.5893899,8.41395349 15.9345098,8.28302592 15.247214,8.28302592 C14.5605151,8.28302592 13.9135878,8.41395349 13.3284864,8.6563168 L10.0284864,3.1165502 C9.91066838,2.81213436 9.63799286,2.61558348 9.31258249,2.61558348 C8.96091771,2.61558348 8.73965635,3.03271872 8.95773705,3.33471683 L12.8114706,8.4744115 C11.2049458,9.84256436 10.247214,11.8211991 10.247214,14.0821596 C10.247214,14.5022557 10.2732286,14.9168022 10.3231201,15.324842 L4.88360024,15.324842 L4.88360024,16.7118506 L10.5139516,16.7118506 C10.9738405,17.8626747 11.8311798,18.8200652 12.9288394,19.3254625 C11.9159636,19.8215215 11.1258677,20.6357508 10.7127749,21.6380046 C10.3231201,20.6357508 9.53301416,19.8215215 8.52013838,19.3254625 C9.6178031,18.8200652 10.4751365,17.8626747 10.9350254,16.7118506 L5.86360024,16.7118506 L5.86360024,15.324842 L11.4238584,15.324842 C11.4737499,14.9168022 11.4997644,14.5022557 11.4997644,14.0821596 C11.4997644,12.2909093 10.9603864,10.6297169 10.0335417,9.29638998 Z"/></svg>
+                    Available on Google Play
+                </span>
+            </div>
+            <div class="card-footer" style="padding: 0;">
+                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn" style="background: var(--tab-active-bg); width: 100%; border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);">
+                    <span>Install</span>
+                </a>
+            </div>
+        </div>
+    `;
+}
 let currentReportGroup = null;
 let currentReportType = 'group';
 function openReportModal(itemId, type = 'group') {
@@ -1027,39 +1059,6 @@ function initWhatsAppApp() {
 onSnapshot(sponsorsRef, (docSnap) => {
     state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
 });
-
-function createSponsorCard(sponsor) {
-    return `
-        <div class="group-card sponsor-card">
-            <div class="card-header">
-                <div class="header-left">
-                    ${sponsor.icon ? `<div class="group-icon"><img src="${escapeHtml(sponsor.icon)}" alt="" onerror="this.style.display='none';"></div>` : ''}
-                    <div class="header-text">
-                        <h3 class="group-name">${escapeHtml(sponsor.name)}</h3>
-                    </div>
-                </div>
-                <span class="type-badge sponsor">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right: 4px;">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-                    </svg>
-                    Sponsored Ad
-                </span>
-            </div>
-            <p class="group-description">${escapeHtml(sponsor.description || 'Check out this amazing app')}</p>
-            <div class="card-meta-row" style="border: none; padding: 0 18px 12px; margin: 0;">
-                <span class="meta-left" style="background: rgba(13, 110, 253, 0.1); color: var(--tab-active-bg);">
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M17.6915026,8.4744115 L21.545337,3.33471683 C21.7634177,3.03271872 21.5421564,2.61558348 21.1904951,2.61558348 C20.8650848,2.61558348 20.5924093,2.81213436 20.4744913,3.1165502 L17.1744913,8.6563168 C16.5893899,8.41395349 15.9345098,8.28302592 15.247214,8.28302592 C14.5605151,8.28302592 13.9135878,8.41395349 13.3284864,8.6563168 L10.0284864,3.1165502 C9.91066838,2.81213436 9.63799286,2.61558348 9.31258249,2.61558348 C8.96091771,2.61558348 8.73965635,3.03271872 8.95773705,3.33471683 L12.8114706,8.4744115 C11.2049458,9.84256436 10.247214,11.8211991 10.247214,14.0821596 C10.247214,14.5022557 10.2732286,14.9168022 10.3231201,15.324842 L4.88360024,15.324842 L4.88360024,16.7118506 L10.5139516,16.7118506 C10.9738405,17.8626747 11.8311798,18.8200652 12.9288394,19.3254625 C11.9159636,19.8215215 11.1258677,20.6357508 10.7127749,21.6380046 C10.3231201,20.6357508 9.53301416,19.8215215 8.52013838,19.3254625 C9.6178031,18.8200652 10.4751365,17.8626747 10.9350254,16.7118506 L5.86360024,16.7118506 L5.86360024,15.324842 L11.4238584,15.324842 C11.4737499,14.9168022 11.4997644,14.5022557 11.4997644,14.0821596 C11.4997644,12.2909093 10.9603864,10.6297169 10.0335417,9.29638998 Z"/></svg>
-                    Available on Google Play
-                </span>
-            </div>
-            <div class="card-footer" style="padding: 0;">
-                <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn" style="background: var(--tab-active-bg); width: 100%; border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg);">
-                    <span>Install</span>
-                </a>
-            </div>
-        </div>
-    `;
-}
 }
 
 function initPromo() {
@@ -1363,6 +1362,7 @@ window.createGroupCard = createGroupCard;
 window.escapeHtml = escapeHtml;
 window.createChannelCard = createChannelCard;
 window.subscribeToChannels = subscribeToChannels;
+window.createSponsorCard = createSponsorCard;
 ////////////////////////////////
 
 let bannerAd = null;
