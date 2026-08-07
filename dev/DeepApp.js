@@ -81,10 +81,12 @@ function subscribeToGroups() {
         }
     }, 12000);
 
-    // ALWAYS hide spinner after exactly 5 seconds
+    // Fallback: hide spinner after 5 seconds if data still hasn't loaded
     let spinnerTimer = setTimeout(() => {
-        state.showSpinner = false;
-        render();
+        if (state.showSpinner) {
+            state.showSpinner = false;
+            render();
+        }
     }, 5000);
 
     unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
@@ -92,12 +94,18 @@ function subscribeToGroups() {
             clearTimeout(slowConnectionTimer);
             clearTimeout(spinnerTimer);
             
+            // Check if this is from cache or server
+            const isFromCache = docSnap.metadata.fromCache;
+            
+            // Only hide spinner when data is from server (not cache)
+            if (!isFromCache) {
+                state.showSpinner = false;
+            }
+            
             state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
             state.isLoading = false;
             state.hasError = false;
             
-            // Only hide spinner if 5 seconds haven't passed yet
-            // The timer will handle hiding after 5s
             render();
         },
         (error) => {
