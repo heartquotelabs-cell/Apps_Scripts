@@ -484,6 +484,9 @@ function renderGroupsBody() {
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
     BookmarkManager.updateBookmarkCount();
 
+    // Only show inline spinner when activeTab is 'new' and still loading
+    const showSpinner = state.activeTab === 'new' && state.isLoading;
+
     return `
         <div class="stats-bar">
             <div class="stat-card">
@@ -516,8 +519,15 @@ function renderGroupsBody() {
             ` : ''}
         </div>
 
+        ${showSpinner ? `
+            <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
+                <div class="simple-spinner"></div>
+                <span class="inline-spinner-text">checking new items...</span>
+            </div>
+        ` : ''}
+
         <div class="groups-grid">
-            ${filteredGroups.length === 0 ? createEmptyState() :
+            ${filteredGroups.length === 0 && !showSpinner ? createEmptyState() :
               filteredGroups.map(g => (g.type === 'channel' && typeof window.createChannelCard === 'function') 
                   ? window.createChannelCard(g) 
                   : (g.type === 'sponsor' ? createSponsorCard(g) : createGroupCard(g))
@@ -536,7 +546,11 @@ function render() {
         }
         return;
     }
-if (state.isLoading) {if (window.AppUI) window.AppUI.showShimmer(6);return;}
+    
+    if (state.isLoading) {
+        if (window.AppUI) window.AppUI.showShimmer(6);
+        return;
+    }
     
     if (state.hasError) {
         if (window.AppUI) {
@@ -544,10 +558,25 @@ if (state.isLoading) {if (window.AppUI) window.AppUI.showShimmer(6);return;}
                 'Slow or no internet connection. Please check your network and try again.',
                 () => subscribeToGroups()
             );
-        }return;}
+        }
+        return;
+    }
+    
     if (window.AppUI) {
         const filteredGroups = getFilteredGroups();
-        window.AppUI.renderGroups(renderGroupsBody());}}
+        window.AppUI.renderGroups(renderGroupsBody());
+        
+        // Auto-hide spinner after 5 seconds if it's still visible
+        if (state.activeTab === 'new') {
+            setTimeout(() => {
+                const wrapper = document.getElementById('inline-spinner-wrapper');
+                if (wrapper) {
+                    wrapper.classList.add('hidden');
+                }
+            }, 5000);
+        }
+    }
+}
 
 function openAddModal() {
     document.getElementById('modal-title').textContent = 'Add New Group';
@@ -1390,4 +1419,4 @@ async function
 if (!interstitialAd) return;
 if (!canShowFullScreenAd()) return;
 if (await interstitialAd.show()) {
-lastFullScreenAdAt = Date.now();}} 
+lastFullScreenAdAt = Date.now();}}
