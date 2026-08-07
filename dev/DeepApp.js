@@ -45,6 +45,7 @@ let state = {
 let unsubscribeChannels = null;
 let channelsSubscribed = false;
 let unsubscribeGroups = null;
+let unsubscribeSponsors = null;
 async function refreshMyGroupsStatus() {
     if (!state.userDisplayName) return;
     try {
@@ -64,6 +65,10 @@ function subscribeToGroups() {
         unsubscribeGroups();
         unsubscribeGroups = null;
     }
+    if (unsubscribeSponsors) {
+        unsubscribeSponsors();
+        unsubscribeSponsors = null;
+    }
     
     // Set loading and show spinner
     state.isLoading = true;
@@ -71,7 +76,9 @@ function subscribeToGroups() {
     state.showSpinner = true;
     render();
     
-    const liveRef = doc(db, 'liveData', 'groups');
+const liveRef = doc(db, 'liveData', 'groups');
+    const sponsorsRef = doc(db, 'liveData', 'sponsors');
+
     const slowConnectionTimer = setTimeout(() => {
         if (state.isLoading) {
             state.isLoading = false;
@@ -81,23 +88,10 @@ function subscribeToGroups() {
         }
     }, 12000);
 
-    // Fallback: hide spinner after 5 seconds if data still hasn't loaded
-    let spinnerTimer = setTimeout(() => {
-        if (state.showSpinner) {
-            state.showSpinner = false;
-            render();
-        }
-    }, 5000);
-
     unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
         (docSnap) => {
             clearTimeout(slowConnectionTimer);
-            clearTimeout(spinnerTimer);
-            
-            // Check if this is from cache or server
             const isFromCache = docSnap.metadata.fromCache;
-            
-            // Only hide spinner when data is from server (not cache)
             if (!isFromCache) {
                 state.showSpinner = false;
             }
@@ -110,7 +104,6 @@ function subscribeToGroups() {
         },
         (error) => {
             clearTimeout(slowConnectionTimer);
-            clearTimeout(spinnerTimer);
             console.error('Error fetching groups:', error);
             state.isLoading = false;
             state.hasError = true;
@@ -118,6 +111,17 @@ function subscribeToGroups() {
             render();
         }
     );
+
+    unsubscribeSponsors = onSnapshot(sponsorsRef, { includeMetadataChanges: true },
+        (docSnap) => {
+            state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
+            render();
+        },
+        (error) => {
+            console.error('Error fetching sponsors:', error);
+        }
+    );
+
     return unsubscribeGroups;
 }
 function subscribeToChannels() {
@@ -1118,7 +1122,7 @@ function initWhatsAppApp() {
     render();
     subscribeToGroups();
   setupDisplayNameLiveCheck();
-      const sponsorsRef = doc(db, 'liveData', 'sponsors');
+const sponsorsRef = doc(db, 'liveData', 'sponsors');
 onSnapshot(sponsorsRef, (docSnap) => {
     state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
 });
