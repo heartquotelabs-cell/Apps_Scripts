@@ -66,6 +66,7 @@ function subscribeToGroups() {
     state.isLoading = true;
     state.hasError = false;
     render();
+    
     const liveRef = doc(db, 'liveData', 'groups');
     const slowConnectionTimer = setTimeout(() => {
         if (state.isLoading) {
@@ -75,27 +76,39 @@ function subscribeToGroups() {
         }
     }, 12000);
 
+    let spinnerTimer = setTimeout(() => {
+        const wrapper = document.getElementById('inline-spinner-wrapper');
+        if (wrapper) {
+            wrapper.classList.add('hidden');
+        }
+    }, 5000);
+
     unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
         (docSnap) => {
-            if (docSnap.metadata.fromCache && !docSnap.exists()) {
-                return;
-            }
-
             clearTimeout(slowConnectionTimer);
+            clearTimeout(spinnerTimer);
             state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
             state.isLoading = false;
             state.hasError = false;
+            
+            const wrapper = document.getElementById('inline-spinner-wrapper');
+            if (wrapper) {
+                wrapper.classList.add('hidden');
+            }
+            
             render();
         },
         (error) => {
             clearTimeout(slowConnectionTimer);
+            clearTimeout(spinnerTimer);
             console.error('Error fetching groups:', error);
             state.isLoading = false;
             state.hasError = true;
             render();
         }
     );
-    return unsubscribeGroups;}
+    return unsubscribeGroups;
+}
 function subscribeToChannels() {
     if (unsubscribeChannels) { unsubscribeChannels(); unsubscribeChannels = null; }
     const liveRef = doc(db, 'liveData', 'channels');
@@ -484,10 +497,9 @@ function renderGroupsBody() {
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
     BookmarkManager.updateBookmarkCount();
 
-    // Only show inline spinner when activeTab is 'new' and still loading
     const showSpinner = state.activeTab === 'new' && state.isLoading;
 
-    return `
+    let statsHtml = `
         <div class="stats-bar">
             <div class="stat-card">
                 <div class="stat-info">
@@ -495,43 +507,72 @@ function renderGroupsBody() {
                     <p>${state.activeTab === 'bookmarks' ? 'Bookmarked Items' : state.activeTab === 'channels' ? 'Active Channels' : 'Active Groups'}</p>
                 </div>
             </div>
-            ${state.activeTab === 'new' && state.userDisplayName ? `
-                <div class="stat-card">
-                    <div class="stat-info"><h3>${state.myGroupsStatus.pending}</h3><p>Pending Review</p></div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-info"><h3>${state.myGroupsStatus.approved}</h3><p>Your Approved</p></div>
-                </div>
-            ` : ''}
-        </div> 
-
-        <div class="section-header">
-            <h2 class="section-title">
-                ${state.activeTab === 'featured' ? 'Featured Groups' :
-                  state.activeTab === 'new' ? 'New Groups' :
-                  state.activeTab === 'channels' ? 'Channels' :
-                  state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
-            </h2>
-            ${state.activeTab === 'new' ? `
-                <button class="btn btn-primary" onclick="openAddModal()">${icons.plus} Add Group</button>
-            ` : state.activeTab === 'channels' ? `
-                <button class="btn btn-primary" onclick="openAddChannelModal()">${icons.plus} Add Channel</button>
-            ` : ''}
-        </div>
-
-        ${showSpinner ? `
-            <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
-                <div class="simple-spinner"></div>
-                <span class="inline-spinner-text">checking new items...</span>
+    `;
+    
+    if (state.activeTab === 'new' && state.userDisplayName) {
+        statsHtml += `
+            <div class="stat-card">
+                <div class="stat-info"><h3>${state.myGroupsStatus.pending}</h3><p>Pending Review</p></div>
             </div>
-        ` : ''}
+            <div class="stat-card">
+                <div class="stat-info"><h3>${state.myGroupsStatus.approved}</h3><p>Your Approved</p></div>
+            </div>
+        `;
+    }
+    statsHtml += `</div>`;
 
+    let sectionHeaderHtml = `
+        <div class="section-header">
+            <div class="section-header-left">
+                <h2 class="section-title">
+                    ${state.activeTab === 'featured' ? 'Featured Groups' :
+                      state.activeTab === 'new' ? 'New Groups' :
+                      state.activeTab === 'channels' ? 'Channels' :
+                      state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
+                </h2>
+    `;
+    
+    if (showSpinner) {
+        sectionHeaderHtml += `
+                <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
+                    <div class="simple-spinner"></div>
+                    <span class="inline-spinner-text">Checking new items...</span>
+                </div>
+        `;
+    }
+    
+    sectionHeaderHtml += `
+            </div>
+            <div class="section-header-right">
+                ${state.activeTab === 'new' ? `
+                    <button class="btn btn-primary" onclick="openAddModal()">${icons.plus} Add Group</button>
+                ` : state.activeTab === 'channels' ? `
+                    <button class="btn btn-primary" onclick="openAddChannelModal()">${icons.plus} Add Channel</button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    let groupsHtml = '';
+    if (filteredGroups.length === 0 && !showSpinner) {
+        groupsHtml = createEmptyState();
+    } else if (filteredGroups.length > 0) {
+        groupsHtml = filteredGroups.map(g => {
+            if (g.type === 'channel' && typeof window.createChannelCard === 'function') {
+                return window.createChannelCard(g);
+            } else if (g.type === 'sponsor') {
+                return createSponsorCard(g);
+            } else {
+                return createGroupCard(g);
+            }
+        }).join('');
+    }
+
+    return `
+        ${statsHtml}
+        ${sectionHeaderHtml}
         <div class="groups-grid">
-            ${filteredGroups.length === 0 && !showSpinner ? createEmptyState() :
-              filteredGroups.map(g => (g.type === 'channel' && typeof window.createChannelCard === 'function') 
-                  ? window.createChannelCard(g) 
-                  : (g.type === 'sponsor' ? createSponsorCard(g) : createGroupCard(g))
-              ).join('')}
+            ${groupsHtml}
         </div>
     `;
 }
@@ -548,7 +589,9 @@ function render() {
     }
     
     if (state.isLoading) {
-        if (window.AppUI) window.AppUI.showShimmer(6);
+        if (window.AppUI) {
+            window.AppUI.renderGroups(renderGroupsBody());
+        }
         return;
     }
     
@@ -563,18 +606,7 @@ function render() {
     }
     
     if (window.AppUI) {
-        const filteredGroups = getFilteredGroups();
         window.AppUI.renderGroups(renderGroupsBody());
-        
-        // Auto-hide spinner after 5 seconds if it's still visible
-        if (state.activeTab === 'new') {
-            setTimeout(() => {
-                const wrapper = document.getElementById('inline-spinner-wrapper');
-                if (wrapper) {
-                    wrapper.classList.add('hidden');
-                }
-            }, 5000);
-        }
     }
 }
 
