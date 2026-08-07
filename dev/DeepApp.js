@@ -39,7 +39,8 @@ let state = {
     addModalMode: 'group',
     userDisplayName: localStorage.getItem('userDisplayName') || '',
     myGroupsStatus: { pending: 0, approved: 0 },
-    sponsors: []
+    sponsors: [],
+    showSpinner: false
 };
 let unsubscribeChannels = null;
 let channelsSubscribed = false;
@@ -63,8 +64,11 @@ function subscribeToGroups() {
         unsubscribeGroups();
         unsubscribeGroups = null;
     }
+    
+    // Set loading and show spinner
     state.isLoading = true;
     state.hasError = false;
+    state.showSpinner = true;
     render();
     
     const liveRef = doc(db, 'liveData', 'groups');
@@ -72,30 +76,28 @@ function subscribeToGroups() {
         if (state.isLoading) {
             state.isLoading = false;
             state.hasError = true;
+            state.showSpinner = false;
             render();
         }
     }, 12000);
 
+    // ALWAYS hide spinner after exactly 5 seconds
     let spinnerTimer = setTimeout(() => {
-        const wrapper = document.getElementById('inline-spinner-wrapper');
-        if (wrapper) {
-            wrapper.classList.add('hidden');
-        }
+        state.showSpinner = false;
+        render();
     }, 5000);
 
     unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
         (docSnap) => {
             clearTimeout(slowConnectionTimer);
             clearTimeout(spinnerTimer);
+            
             state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
             state.isLoading = false;
             state.hasError = false;
             
-            const wrapper = document.getElementById('inline-spinner-wrapper');
-            if (wrapper) {
-                wrapper.classList.add('hidden');
-            }
-            
+            // Only hide spinner if 5 seconds haven't passed yet
+            // The timer will handle hiding after 5s
             render();
         },
         (error) => {
@@ -104,6 +106,7 @@ function subscribeToGroups() {
             console.error('Error fetching groups:', error);
             state.isLoading = false;
             state.hasError = true;
+            state.showSpinner = false;
             render();
         }
     );
@@ -497,7 +500,8 @@ function renderGroupsBody() {
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
     BookmarkManager.updateBookmarkCount();
 
-    const showSpinner = state.activeTab === 'new' && state.isLoading;
+    // Show spinner when on 'new' tab and spinner should be visible
+    const showSpinner = state.activeTab === 'new' && state.showSpinner;
 
     let statsHtml = `
         <div class="stats-bar">
@@ -584,13 +588,6 @@ function render() {
             if (body && !body.querySelector('.notice-content')) {
                 window.renderNotice();
             }
-        }
-        return;
-    }
-    
-    if (state.isLoading) {
-        if (window.AppUI) {
-            window.AppUI.renderGroups(renderGroupsBody());
         }
         return;
     }
