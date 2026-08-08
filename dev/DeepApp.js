@@ -6,7 +6,7 @@ import {
     collection, 
     query, 
     orderBy, 
-    onSnapshot,addDoc,updateDoc,deleteDoc,doc, serverTimestamp,where,getDocs,increment,runTransaction} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    onSnapshot,addDoc,updateDoc,deleteDoc,doc,getDoc, serverTimestamp,where,getDocs,increment,runTransaction} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDKlVCPvOic2sQfO2l5GWeXoy5UOpQ3gus",
@@ -46,6 +46,77 @@ let unsubscribeChannels = null;
 let channelsSubscribed = false;
 let unsubscribeGroups = null;
 let unsubscribeSponsors = null;
+function getMySubmissions() {
+    try { return JSON.parse(localStorage.getItem('mySubmissions') || '[]'); }
+    catch (e) { return []; }
+}
+
+function saveMySubmissions(submissions) {
+    try { localStorage.setItem('mySubmissions', JSON.stringify(submissions)); }
+    catch (e) { console.error('Error saving submissions:', e); }
+}
+
+function trackMySubmission(id, type, link) {
+    try {
+        const submissions = getMySubmissions();
+        submissions.push({ id, type, link, status: 'pending', submittedAt: Date.now(), dismissed: false });
+        saveMySubmissions(submissions);
+    } catch (e) { console.error('Error tracking submission:', e); }
+}
+
+async function checkMySubmissionsStatus() {
+    const submissions = getMySubmissions();
+    if (!submissions.length) return;
+
+    const updated = [];
+    for (let sub of submissions) {
+        // Can't resolve channel submissions until channels have actually loaded once
+        if (sub.type === 'channel' && !channelsSubscribed) {
+            updated.push(sub);
+            continue;
+        }
+
+        if (sub.status === 'pending') {
+            const pendingCollection = sub.type === 'channel' ? 'pendingChannels' : 'pendingGroups';
+            let stillPending = false;
+            try {
+                const pendingDoc = await getDoc(doc(db, pendingCollection, sub.id));
+                stillPending = pendingDoc.exists();
+            } catch (e) { stillPending = true; } // fail safe on read error
+
+            if (stillPending) {
+                updated.push(sub);
+                continue;
+            }
+
+            const liveSource = sub.type === 'channel' ? state.channels : state.groups;
+            const isLive = liveSource.some(item => item.link === sub.link);
+            sub = { ...sub, status: isLive ? 'approved' : 'rejected', resolvedAt: Date.now() };
+        }
+
+        // Keep resolved entries for 48h so there's a real chance to show the banner, then let them expire
+        if (sub.status === 'pending' || Date.now() - (sub.resolvedAt || sub.submittedAt) < 48 * 60 * 60 * 1000) {
+            updated.push(sub);
+        }
+    }
+    saveMySubmissions(updated);
+
+    if (!state.congratsNotice) {
+        const unseen = updated.find(s => (s.status === 'approved' || s.status === 'rejected') && !s.dismissed);
+        if (unseen) {
+            state.congratsNotice = unseen;
+            render();
+        }
+    }
+}
+
+function dismissSubmissionNotice(id) {
+    const submissions = getMySubmissions();
+    saveMySubmissions(submissions.map(s => s.id === id ? { ...s, dismissed: true } : s));
+    state.congratsNotice = null;
+    render();
+}
+window.dismissSubmissionNotice = dismissSubmissionNotice;
 async function refreshMyGroupsStatus() {
     if (!state.userDisplayName) return;
     try {
@@ -97,6 +168,7 @@ const liveRef = doc(db, 'liveData', 'groups');
             }
             
             state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
+            checkMySubmissionsStatus();
             state.isLoading = false;
             state.hasError = false;
             
@@ -132,6 +204,7 @@ function subscribeToChannels() {
             if (docSnap.metadata.fromCache && !docSnap.exists()) return;
             state.channels = docSnap.exists() ? (docSnap.data().channels || []) : [];
             if (state.activeTab === 'channels' || state.activeTab === 'bookmarks') render();
+            checkMySubmissionsStatus();
         },
         (error) => { console.error('Error fetching channels:', error); }
     );
@@ -292,12 +365,18 @@ const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width
                     </div>
                     <div class="header-text">
                         <h3 class="group-name">${escapeHtml(channel.name)}</h3>
-                        <div class="group-author"><span>CHANNEL</span></div>
+      <div class="group-author"><span>Channel ${channel.createdAt ? ` <span class="meta-dot">•</span> ${formatDate(new Date(channel.createdAt))}` : ''}</span></div>
                     </div>
                 </div>
                 <span class="type-badge featured">${verifiedIcon} Verified</span>
             </div>
             <p class="group-description">${escapeHtml(channel.description || 'No description available')}</p>
+            <div class="card-meta-row">
+    <div class="meta-left">
+        ${icons.users}
+        <span>${channel.followers || 0} followers</span>
+    </div>
+</div>
             <div class="card-footer">
                 <button class="footer-report-btn" onclick="openReportModal('${channel.id}', 'channel')">
                     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -351,13 +430,15 @@ let currentReportGroup = null;
 let currentReportType = 'group';
 function openReportModal(itemId, type = 'group') {
     const source = type === 'channel' ? state.channels : state.groups;
+  const reportTitleEl = document.getElementById('report-modal-title');
+if (reportTitleEl) reportTitleEl.textContent = type === 'channel' ? 'Report Channel' : 'Report Group';
     const group = source.find(g => g.id === itemId);
     if (!group) return;
     currentReportType = type;
     currentReportGroup = itemId;
 
     document.getElementById('report-group-id').value = itemId;
-    document.getElementById('report-group-name').textContent = group.name;
+    document.getElementById('report-group-name').textContent = `${type === 'channel' ? 'Channel: ' : 'Group: '}${group.name}`;
     document.getElementById('report-group-link').textContent = group.link;
     document.getElementById('report-feedback').value = '';
     document.getElementById('report-email').value = '';
@@ -506,13 +587,31 @@ ${messages[state.activeTab] || 'No groups available at the moment.'}
 </p>
 </div>
 `;}
-
+function createCongratsBanner() {
+    if (!state.congratsNotice) return '';
+    const item = state.congratsNotice;
+    const isApproved = item.status === 'approved';
+    return `
+        <div class="congrats-banner ${isApproved ? 'approved' : 'rejected'}">
+            <div class="congrats-icon">${isApproved ? '🎉' : '📋'}</div>
+            <div class="congrats-text">
+                <p class="congrats-title">${isApproved ? 'Congratulations!' : 'Submission Update'}</p>
+                <p class="congrats-desc">
+                    ${isApproved 
+                        ? `Your ${item.type === 'channel' ? 'channel' : 'group'} is now live and approved!` 
+                        : `Your ${item.type === 'channel' ? 'channel' : 'group'} submission wasn't approved this time.`}
+                </p>
+            </div>
+            <button class="congrats-dismiss" onclick="dismissSubmissionNotice('${item.id}')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+    `;
+}
 function renderGroupsBody() {
     const filteredGroups = getFilteredGroups();
     const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
     BookmarkManager.updateBookmarkCount();
-
-    // Show spinner when on 'new' tab and spinner should be visible
     const showSpinner = state.activeTab === 'new' && state.showSpinner;
 
     let statsHtml = `
@@ -542,7 +641,7 @@ function renderGroupsBody() {
             <div class="section-header-left">
                 <h2 class="section-title">
                     ${state.activeTab === 'featured' ? 'Featured Groups' :
-                      state.activeTab === 'new' ? 'New Groups' :
+                      state.activeTab === 'new' ? 'Groups' :
                       state.activeTab === 'channels' ? 'Channels' :
                       state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
                 </h2>
@@ -559,6 +658,7 @@ function renderGroupsBody() {
     
     sectionHeaderHtml += `
             </div>
+            ${createCongratsBanner()}
             <div class="section-header-right">
                 ${state.activeTab === 'new' ? `
                     <button class="btn btn-primary" onclick="openAddModal()">${icons.plus} Add Group</button>
@@ -847,8 +947,8 @@ async function addGroupWithSpamProtection(groupData) {
             groupToAdd.authorName = 'Anonymous';
         }
 
-        await addDoc(collection(db, 'pendingGroups'), groupToAdd);
-        
+const groupDocRef = await addDoc(collection(db, 'pendingGroups'), groupToAdd);
+        trackMySubmission(groupDocRef.id, 'group', groupToAdd.link);   
         const userSubmissions = recentSubmissions.get(userIP) || [];
         userSubmissions.push(Date.now());
         recentSubmissions.set(userIP, userSubmissions);
@@ -937,17 +1037,19 @@ async function addChannelWithSpamProtection(channelData) {
         const rateLimit = checkChannelRateLimit(userIP);
         if (!rateLimit.allowed) { showToast(rateLimit.message, 'error'); return false; }
 
-        const channelToAdd = {
-            name: channelData.name,
-            link: normalizeChannelLink(channelData.link),
-            description: channelData.description || '',
-            iconUrl: channelData.iconUrl || null,
-            createdAt: serverTimestamp(),
-            type: 'channel',
-            reported: false
-        };
+const channelToAdd = {
+    name: channelData.name,
+    link: normalizeChannelLink(channelData.link),
+    description: channelData.description || '',
+    iconUrl: channelData.iconUrl || null,
+    followers: channelData.followers || 0,
+    createdAt: serverTimestamp(),
+    type: 'channel',
+    reported: false
+};
 
-        await addDoc(collection(db, 'pendingChannels'), channelToAdd);
+const channelDocRef = await addDoc(collection(db, 'pendingChannels'), channelToAdd);
+        trackMySubmission(channelDocRef.id, 'channel', channelToAdd.link);
 
         const subs = recentChannelSubmissions.get(userIP) || [];
         subs.push(Date.now());
@@ -975,12 +1077,13 @@ async function handleGroupSubmit(e) {
     setButtonLoading(submitBtn, true);
 if (state.addModalMode === 'channel') {
         try {
-            const channelData = {
-                name: document.getElementById('group-name').value.trim(),
-                link: document.getElementById('group-link').value.trim(),
-                description: document.getElementById('group-description').value.trim(),
-                iconUrl: document.getElementById('group-icon-url').value.trim() || null
-            };
+const channelData = {
+    name: document.getElementById('group-name').value.trim(),
+    link: document.getElementById('group-link').value.trim(),
+    description: document.getElementById('group-description').value.trim(),
+    iconUrl: document.getElementById('group-icon-url').value.trim() || null,
+    followers: parseInt(document.getElementById('channel-followers').value) || 0
+};
             const nameField = document.getElementById('group-name');
             const linkField = document.getElementById('group-link');
 
