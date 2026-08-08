@@ -70,7 +70,6 @@ async function checkMySubmissionsStatus() {
 
     const updated = [];
     for (let sub of submissions) {
-        // Can't resolve channel submissions until channels have actually loaded once
         if (sub.type === 'channel' && !channelsSubscribed) {
             updated.push(sub);
             continue;
@@ -82,7 +81,7 @@ async function checkMySubmissionsStatus() {
             try {
                 const pendingDoc = await getDoc(doc(db, pendingCollection, sub.id));
                 stillPending = pendingDoc.exists();
-            } catch (e) { stillPending = true; } // fail safe on read error
+            } catch (e) { stillPending = true; }
 
             if (stillPending) {
                 updated.push(sub);
@@ -93,8 +92,6 @@ async function checkMySubmissionsStatus() {
             const isLive = liveSource.some(item => item.link === sub.link);
             sub = { ...sub, status: isLive ? 'approved' : 'rejected', resolvedAt: Date.now() };
         }
-
-        // Keep resolved entries for 48h so there's a real chance to show the banner, then let them expire
         if (sub.status === 'pending' || Date.now() - (sub.resolvedAt || sub.submittedAt) < 48 * 60 * 60 * 1000) {
             updated.push(sub);
         }
@@ -140,8 +137,6 @@ function subscribeToGroups() {
         unsubscribeSponsors();
         unsubscribeSponsors = null;
     }
-    
-    // Set loading and show spinner
     state.isLoading = true;
     state.hasError = false;
     state.showSpinner = true;
@@ -238,12 +233,10 @@ function getFilteredGroups() {
     if ((state.activeTab === 'featured' || state.activeTab === 'new') && state.sponsors && state.sponsors.length > 0) {
         const sponsorsWithType = state.sponsors.map(s => ({ ...s, type: 'sponsor' }));
         items = [...items, ...sponsorsWithType];
-        
-        // Sort by createdAt (sponsors have createdAt, groups have createdAt or use 0)
         items.sort((a, b) => {
             const timeA = a.createdAt || 0;
             const timeB = b.createdAt || 0;
-            return timeB - timeA; // Most recent first
+            return timeB - timeA;
         });
     }
     
@@ -436,20 +429,15 @@ if (reportTitleEl) reportTitleEl.textContent = type === 'channel' ? 'Report Chan
     if (!group) return;
     currentReportType = type;
     currentReportGroup = itemId;
-
     document.getElementById('report-group-id').value = itemId;
     document.getElementById('report-group-name').textContent = `${type === 'channel' ? 'Channel: ' : 'Group: '}${group.name}`;
     document.getElementById('report-group-link').textContent = group.link;
     document.getElementById('report-feedback').value = '';
     document.getElementById('report-email').value = '';
-    
     document.querySelectorAll('.report-reason-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
+        btn.classList.remove('active'); });
     document.getElementById('report-modal').classList.add('active');
-    lockBodyScroll('modal'); 
-}
+    lockBodyScroll('modal');}
 function closeReportModal() {
     document.getElementById('report-modal').classList.remove('active');
     currentReportGroup = null;
@@ -478,29 +466,7 @@ async function submitReport(e) {
     const submitBtn = document.getElementById('report-submit-btn');
     setButtonLoading(submitBtn, true);
 
-    try {
-        const isChannel = currentReportType === 'channel';
-        const liveRef = doc(db, 'liveData', isChannel ? 'channels' : 'groups');
-        const fieldKey = isChannel ? 'channels' : 'groups';
-
-        await runTransaction(db, async (transaction) => {
-            const snap = await transaction.get(liveRef);
-            const items = snap.exists() ? (snap.data()[fieldKey] || []) : [];
-            const idx = items.findIndex(g => g.id === itemId);
-            if (idx === -1) throw new Error(isChannel ? 'Channel not found' : 'Group not found');
-
-            items[idx] = {
-                ...items[idx],
-                reported: true,
-                reportCount: (items[idx].reportCount || 0) + 1,
-                reportedByName: 'Anonymous User',
-                reportedByEmail: email || null,
-                reportReason: feedback,
-                lastReported: Date.now()
-            };
-            transaction.set(liveRef, { [fieldKey]: items });
-        });
-
+try {
         await addDoc(collection(db, 'reports'), {
             groupId: itemId,
             itemType: currentReportType,
@@ -546,15 +512,15 @@ function selectReportReason(button, reason) {
     button.classList.add('active');
     
     const messages = {
-        spam: 'This group appears to be spamming or sending unsolicited messages.',
-        icon: 'This group contains copyrighted icon.',
-        contents: 'This group have changed its contents after approval and now contains contents against HeartLink rules.',
-        inappropriate: 'This group contains inappropriate or offensive content.',
-        fake: 'This group appears to be fake or impersonating another group.',
-        hate: 'This group contains hate speech or discriminatory content.',
-        scam: 'This group appears to be a scam or fraudulent.',
-        expired: 'The Group Link is expired and i am unable to join.',
-        adult: 'This Group contains adult contents which is harmful for human health.',
+        spam: 'Appears to be spamming or sending unsolicited messages.',
+        icon: 'Contains copyrighted icon.',
+        contents: 'Have changed its contents after approval and now contains contents against HeartLink rules.',
+        inappropriate: 'Contains inappropriate or offensive content.',
+        fake: 'Appears to be fake or impersonating another group.',
+        hate: 'Contains hate speech or discriminatory content.',
+        scam: 'Appears to be a scam or fraudulent.',
+        expired: 'Link is expired and i am unable to interact.',
+        adult: 'Contains adult contents which is harmful for human health.',
         other: ''
     };if (reason !== 'other') {textarea.value =messages[reason];} else {textarea.value = '';textarea.focus();}}
 
@@ -657,7 +623,7 @@ function renderGroupsBody() {
         sectionHeaderHtml += `
                 <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
                     <div class="simple-spinner"></div>
-                    <span class="inline-spinner-text">Checking new items...</span>
+                    <span class="inline-spinner-text">Checking for new items...</span>
                 </div>
         `;
     }
@@ -793,8 +759,6 @@ function openAddChannelModal() {
     document.querySelector('label[for="group-name"]').textContent = 'Channel Name';
     document.querySelector('label[for="group-link"]').textContent = 'Channel Link';
     document.querySelector('label[for="group-description"]').textContent = 'Channel description...';
-    
-    // Show followers input
     const followersWrap = document.getElementById('channel-followers-wrap');
     if (followersWrap) {
         followersWrap.style.display = 'block';
