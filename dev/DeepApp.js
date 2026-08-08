@@ -239,10 +239,7 @@ function getFilteredGroups() {
             return timeB - timeA;
         });
     }
-    
-    return items;
-}
-
+    return items;}
 function createGroupCard(group) {
     const isAdminGroup = group.type === 'featured';
     const userReportButton = group.type === 'user' ? `
@@ -295,7 +292,7 @@ ${authorDisplay}
 ${typeBadge}
 </div>
 <p class="group-description">${escapeHtml(group.description || 'No description available')}</p>
-
+${createJoinTypePill(group)}
 <div class="card-meta-row">
     <div class="meta-left">
         ${icons.users}
@@ -333,6 +330,19 @@ ${icons.whatsapp}
 </a>
 </div>
         </div>
+    `;
+}
+function createJoinTypePill(group) {
+    const isRequest = group.joinType === 'request';
+    return `
+        <span class="join-type-pill ${isRequest ? 'request' : 'open'}">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                ${isRequest 
+                    ? '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>' 
+                    : '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>'}
+            </svg>
+            ${isRequest ? 'Request to Join' : 'Open to Join'}
+        </span>
     `;
 }
 function createChannelCard(channel) {
