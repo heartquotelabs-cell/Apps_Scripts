@@ -591,9 +591,15 @@ function createCongratsBanner() {
     if (!state.congratsNotice) return '';
     const item = state.congratsNotice;
     const isApproved = item.status === 'approved';
+    const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+    
+    const rejectedIcon = `<svg class="congrats-icon-svg rejected-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+
+    const iconHtml = isApproved ? verifiedIcon : rejectedIcon;
+
     return `
         <div class="congrats-banner ${isApproved ? 'approved' : 'rejected'}">
-            <div class="congrats-icon">${isApproved ? '🎉' : '📋'}</div>
+            <div class="congrats-icon-wrapper">${iconHtml}</div>
             <div class="congrats-text">
                 <p class="congrats-title">${isApproved ? 'Congratulations!' : 'Submission Update'}</p>
                 <p class="congrats-desc">
@@ -635,7 +641,7 @@ function renderGroupsBody() {
         `;
     }
     statsHtml += `</div>`;
-
+   const congratsBannerHtml = createCongratsBanner();
     let sectionHeaderHtml = `
         <div class="section-header">
             <div class="section-header-left">
@@ -658,7 +664,6 @@ function renderGroupsBody() {
     
     sectionHeaderHtml += `
             </div>
-            ${createCongratsBanner()}
             <div class="section-header-right">
                 ${state.activeTab === 'new' ? `
                     <button class="btn btn-primary" onclick="openAddModal()">${icons.plus} Add Group</button>
@@ -686,6 +691,7 @@ function renderGroupsBody() {
 
     return `
         ${statsHtml}
+      ${createCongratsBanner()}
         ${sectionHeaderHtml}
         <div class="groups-grid">
             ${groupsHtml}
@@ -773,8 +779,11 @@ const authorNameField = document.getElementById('author-name');
     if (!state.userDisplayName && authorNameField) authorNameField.style.borderColor = '';
     nameAvailability = { name: '', available: null };
     document.getElementById('group-modal').classList.add('active');
+       const followersWrap = document.getElementById('channel-followers-wrap');
+    if (followersWrap) {
+        followersWrap.style.display = 'none';}
     lockBodyScroll('modal'); 
-    if (typeof prepareInterstitial === 'function') prepareInterstitial();}
+  if (typeof prepareInterstitial === 'function') prepareInterstitial();}
 function openAddChannelModal() {
     state.addModalMode = 'channel';
     document.getElementById('modal-title').textContent = 'Add New Channel';
@@ -783,7 +792,14 @@ function openAddChannelModal() {
     document.getElementById('group-modal').classList.add('channel-mode');
     document.querySelector('label[for="group-name"]').textContent = 'Channel Name';
     document.querySelector('label[for="group-link"]').textContent = 'Channel Link';
-document.querySelector('label[for="group-description"]').textContent = 'Channel description...';
+    document.querySelector('label[for="group-description"]').textContent = 'Channel description...';
+    
+    // Show followers input
+    const followersWrap = document.getElementById('channel-followers-wrap');
+    if (followersWrap) {
+        followersWrap.style.display = 'block';
+    }
+    
     selectedIconUrl = '';
     document.getElementById('group-icon-url').value = '';
     if (typeof updateFinalIconPreview === 'function') updateFinalIconPreview('');
@@ -797,7 +813,15 @@ document.querySelector('label[for="group-description"]').textContent = 'Channel 
     lockBodyScroll('modal');
 }
 window.openAddChannelModal = openAddChannelModal;
-function closeModal() {document.getElementById('group-modal').classList.remove('active');checkAndUnlockBodyScroll(); }
+function closeModal() {
+    document.getElementById('group-modal').classList.remove('active');
+    const followersWrap = document.getElementById('channel-followers-wrap');
+    if (followersWrap) {
+        followersWrap.style.display = 'none';
+    }
+    
+    checkAndUnlockBodyScroll();
+}
 
 function closeModalOnOverlay(e) {
     if (e.target.classList.contains('modal-overlay')) {
