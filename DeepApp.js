@@ -881,11 +881,11 @@ function setupDisplayNameLiveCheck() {
         if (existing) existing.remove();
 
         const CONFIG = {
-            latestVersion: "1.1.0",
+            latestVersion: "1.3.0",
             minRequiredVersion: "1.0.0",
             playStoreUrl: "https://play.google.com/store/apps/details?id=com.heartquotelabs.heartlink",
             title: "Update Available",
-            msgOptional: "A new version is available with fresh features. Would you like to update now?",
+            msgOptional: "A new version is available with new features. Would you like to update now?",
             msgForce: "Your app version is no longer supported. Please update to the latest version to continue."
         };
 
