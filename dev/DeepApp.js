@@ -40,7 +40,8 @@ let state = {
     userDisplayName: localStorage.getItem('userDisplayName') || '',
     myGroupsStatus: { pending: 0, approved: 0 },
     sponsors: [],
-    showSpinner: false
+    showSpinner: false,
+    groupJoinTypeFilter: 'all'
 };
 let unsubscribeChannels = null;
 let channelsSubscribed = false;
@@ -218,8 +219,13 @@ function getFilteredGroups() {
         case 'featured':
             items = state.groups.filter(group => group.type === 'featured' || group.type === 'admin');
             break;
-        case 'new':
+case 'new':
             items = state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
+            if (state.groupJoinTypeFilter === 'open') {
+                items = items.filter(g => (g.joinType || 'open') === 'open');
+            } else if (state.groupJoinTypeFilter === 'request') {
+                items = items.filter(g => g.joinType === 'request');
+            }
             break;
         case 'channels':
             items = state.channels;
@@ -541,7 +547,7 @@ function createEmptyState() {
         featured: 'Explore Groups section or check back later!',
         new: 'No user-added groups yet. Be the first to add one!',
         channels: 'No channels yet. Be the first to add one!',
-        bookmarks: 'Bookmark helps you keep your chosen groups and channels separate from the rest!'};
+        bookmarks: 'Bookmark keeps your chosen groups and channels separate from the rest!'};
 
     const titles = {
         bookmarks: 'No Bookmarks',
@@ -590,18 +596,23 @@ function createCongratsBanner() {
         </div>
     `;
 }
+function updateHeaderSpinner(show) {
+    const wrapper = document.getElementById('inline-spinner-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.toggle('hidden', !show);
+}
 function renderGroupsBody() {
     const filteredGroups = getFilteredGroups();
-    const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
+    const statsCount = filteredGroups.filter(g => g.type !== 'sponsor').length;
+const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
     BookmarkManager.updateBookmarkCount();
     const showSpinner = state.activeTab === 'new' && state.showSpinner;
-
     let statsHtml = `
         <div class="stats-bar">
             <div class="stat-card">
                 <div class="stat-info">
-                    <h3>${filteredGroups.length}</h3>
-                    <p>${state.activeTab === 'bookmarks' ? 'Bookmarked Items' : state.activeTab === 'channels' ? 'Active Channels' : 'Active Groups'}</p>
+         <h3>${statsCount}</h3>
+     <p>${state.activeTab === 'bookmarks' ? 'Bookmarked Items' : state.activeTab === 'channels' ? 'Active Channels' : 'Active Groups'}</p>
                 </div>
             </div>
     `;
@@ -618,7 +629,8 @@ function renderGroupsBody() {
     }
     statsHtml += `</div>`;
    const congratsBannerHtml = createCongratsBanner();
-    let sectionHeaderHtml = `
+  
+let sectionHeaderHtml = `
         <div class="section-header">
             <div class="section-header-left">
                 <h2 class="section-title">
@@ -627,22 +639,12 @@ function renderGroupsBody() {
                       state.activeTab === 'channels' ? 'Channels' :
                       state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
                 </h2>
-    `;
-    
-    if (showSpinner) {
-        sectionHeaderHtml += `
-  <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
-  <div class="simple-spinner"></div>
-    <span class="inline-spinner-text">Checking new Groups...</span>
-                </div>
-        `;
-    }
-    
-    sectionHeaderHtml += `
             </div>
             <div class="section-header-right"></div>
         </div>
     `;
+
+    updateHeaderSpinner(showSpinner);
 
     let groupsHtml = '';
     if (filteredGroups.length === 0 && !showSpinner) {
@@ -659,12 +661,24 @@ function renderGroupsBody() {
         }).join('');
     }
 
-    return `
+return `
         ${statsHtml}
+        ${state.activeTab === 'new' ? createJoinTypeFilterBar() : ''}
       ${createCongratsBanner()}
         ${sectionHeaderHtml}
         <div class="groups-grid">
             ${groupsHtml}
+        </div>
+    `;}
+function createJoinTypeFilterBar() {
+    const labels = { all: 'All Groups', open: 'Open to Join', request: 'Request to Join' };
+    const activeLabel = labels[state.groupJoinTypeFilter] || 'All Groups';
+    return `
+        <div class="join-filter-bar" onclick="openJoinTypeFilterDialog()">
+            <span class="join-filter-label">${activeLabel}</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+            </svg>
         </div>
     `;
 }
@@ -797,6 +811,9 @@ function closeModalOnOverlay(e) {
 
 function switchTab(tab) {
     if (!tab || tab === 'notice') return;
+    if (tab !== 'new') {
+        state.groupJoinTypeFilter = 'all';
+    }
     state.activeTab = tab;
     if (tab === 'channels' && !channelsSubscribed) {
         channelsSubscribed = true;
@@ -1503,7 +1520,13 @@ function setupDisplayNameLiveCheck() {
         `;
 
 document.body.appendChild(wrapper);const updateBtn = wrapper.querySelector('#update-action');const laterBtn = wrapper.querySelector('#later-action');updateBtn.onclick = () => {const url = CONFIG.playStoreUrl;if (window.cordova && window.cordova.InAppBrowser) {window.cordova.InAppBrowser.open(url, '_system');console.log('[Update Check] Opening Play Store via InAppBrowser');return;}const isAndroid = /android/i.test(navigator.userAgent);if (isAndroid) {const packageName = url.match(/id=([^&]+)/)?.[1];if (packageName) {console.log('[Update Check] Opening Play Store via market:// protocol');window.location.href = `market://details?id=${packageName}`;setTimeout(() => {console.log('[Update Check] Fallback to web URL');window.location.href = url;}, 2000);return;}}console.log('[Update Check] Opening Play Store via window.open');const newWindow = window.open(url, '_blank');if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {console.log('[Update Check] Popup blocked, navigating current window');window.location.href = url;}};if (laterBtn) {laterBtn.onclick = () => {wrapper.remove();};}wrapper.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });}, 300);})();     
-        
+function getJoinTypeFilter() { return state.groupJoinTypeFilter || 'all'; }
+function setJoinTypeFilter(value) {
+    state.groupJoinTypeFilter = value;
+    render();
+}
+window.getJoinTypeFilter = getJoinTypeFilter;
+window.setJoinTypeFilter = setJoinTypeFilter; 
 window.syncTabState = syncTabState;
 window.openAddModal = openAddModal;
 window.handleGroupSubmit = handleGroupSubmit;
