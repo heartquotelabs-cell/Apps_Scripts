@@ -260,7 +260,7 @@ const typeBadge = isAdminGroup ?
 
     const authorDisplay = group.authorName ? `
         <div class="group-author">
-            <span>Added by: <strong>${escapeHtml(group.authorName)}</strong> 
+            <span><strong>${escapeHtml(group.authorName)}</strong> 
 ${group.createdAt ? `<span class="meta-dot">•</span><span>${formatDate(new Date(group.createdAt))}</span>` : ''}      </span>
         </div>
     ` : '';
@@ -541,7 +541,7 @@ function createEmptyState() {
         featured: 'Explore Groups section or check back later!',
         new: 'No user-added groups yet. Be the first to add one!',
         channels: 'No channels yet. Be the first to add one!',
-        bookmarks: 'No bookmarked items yet. Bookmark helps you keep your chosen groups and channels separate from the rest!'};
+        bookmarks: 'Bookmark helps you keep your chosen groups and channels separate from the rest!'};
 
     const titles = {
         bookmarks: 'No Bookmarks',
@@ -631,22 +631,16 @@ function renderGroupsBody() {
     
     if (showSpinner) {
         sectionHeaderHtml += `
-                <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
-                    <div class="simple-spinner"></div>
-                    <span class="inline-spinner-text">Checking for new items...</span>
+  <div class="inline-spinner-wrapper" id="inline-spinner-wrapper">
+  <div class="simple-spinner"></div>
+    <span class="inline-spinner-text">Checking new Groups...</span>
                 </div>
         `;
     }
     
     sectionHeaderHtml += `
             </div>
-            <div class="section-header-right">
-                ${state.activeTab === 'new' ? `
-                    <button class="btn btn-primary" onclick="openAddModal()">${icons.plus} Add Group</button>
-                ` : state.activeTab === 'channels' ? `
-                    <button class="btn btn-primary" onclick="openAddChannelModal()">${icons.plus} Add Channel</button>
-                ` : ''}
-            </div>
+            <div class="section-header-right"></div>
         </div>
     `;
 
@@ -1346,7 +1340,7 @@ function setupDisplayNameLiveCheck() {
         if (existing) existing.remove();
 
         const CONFIG = {
-            latestVersion: "1.1.0",
+            latestVersion: "1.4.0",
             minRequiredVersion: "1.0.0",
             playStoreUrl: "https://play.google.com/store/apps/details?id=com.heartquotelabs.heartlink",
             title: "Update Available",
