@@ -1,0 +1,1584 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { 
+    initializeFirestore,
+    persistentLocalCache,
+    persistentSingleTabManager,
+    collection, 
+    query, 
+    orderBy, 
+    onSnapshot,addDoc,updateDoc,deleteDoc,doc,getDoc, serverTimestamp,where,getDocs,increment,runTransaction} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDKlVCPvOic2sQfO2l5GWeXoy5UOpQ3gus",
+    authDomain: "heartlink-89f30.firebaseapp.com",
+    projectId: "heartlink-89f30",
+    storageBucket: "heartlink-89f30.firebasestorage.app",
+    messagingSenderId: "233254193906",
+    appId: "1:233254193906:web:6ec1c326936c7e6b25de6b",
+    measurementId: "G-EZTW1HP5Y6"
+  };
+
+const app = initializeApp(firebaseConfig);
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })});
+const icons = {
+    whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>`,
+    users: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`,
+    close: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`,
+    edit: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`,
+    delete: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`,
+    group: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>`,
+    user: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`};
+let state = {
+    groups: [],
+    channels: [],
+    isLoading: true,
+    hasError: false,
+    activeTab: 'featured',
+    addModalMode: 'group',
+    userDisplayName: localStorage.getItem('userDisplayName') || '',
+    myGroupsStatus: { pending: 0, approved: 0 },
+    sponsors: [],
+    showSpinner: false,
+    groupJoinTypeFilter: 'all'
+};
+let unsubscribeChannels = null;
+let channelsSubscribed = false;
+let unsubscribeGroups = null;
+let unsubscribeSponsors = null;
+function getMySubmissions() {
+    try { return JSON.parse(localStorage.getItem('mySubmissions') || '[]'); }
+    catch (e) { return []; }
+}
+
+function saveMySubmissions(submissions) {
+    try { localStorage.setItem('mySubmissions', JSON.stringify(submissions)); }
+    catch (e) { console.error('Error saving submissions:', e); }
+}
+
+function trackMySubmission(id, type, link) {
+    try {
+        const submissions = getMySubmissions();
+        submissions.push({ id, type, link, status: 'pending', submittedAt: Date.now(), dismissed: false });
+        saveMySubmissions(submissions);
+    } catch (e) { console.error('Error tracking submission:', e); }
+}
+
+async function checkMySubmissionsStatus() {
+    const submissions = getMySubmissions();
+    if (!submissions.length) return;
+
+    const updated = [];
+    for (let sub of submissions) {
+        if (sub.type === 'channel' && !channelsSubscribed) {
+            updated.push(sub);
+            continue;
+        }
+
+        if (sub.status === 'pending') {
+            const pendingCollection = sub.type === 'channel' ? 'pendingChannels' : 'pendingGroups';
+            let stillPending = false;
+            try {
+                const pendingDoc = await getDoc(doc(db, pendingCollection, sub.id));
+                stillPending = pendingDoc.exists();
+            } catch (e) { stillPending = true; }
+
+            if (stillPending) {
+                updated.push(sub);
+                continue;
+            }
+
+            const liveSource = sub.type === 'channel' ? state.channels : state.groups;
+            const isLive = liveSource.some(item => item.link === sub.link);
+            sub = { ...sub, status: isLive ? 'approved' : 'rejected', resolvedAt: Date.now() };
+        }
+        if (sub.status === 'pending' || Date.now() - (sub.resolvedAt || sub.submittedAt) < 48 * 60 * 60 * 1000) {
+            updated.push(sub);
+        }
+    }
+    saveMySubmissions(updated);
+
+    if (!state.congratsNotice) {
+        const unseen = updated.find(s => (s.status === 'approved' || s.status === 'rejected') && !s.dismissed);
+        if (unseen) {
+            state.congratsNotice = unseen;
+            render();
+        }
+    }
+}
+
+function dismissSubmissionNotice(id) {
+    const submissions = getMySubmissions();
+    saveMySubmissions(submissions.map(s => s.id === id ? { ...s, dismissed: true } : s));
+    state.congratsNotice = null;
+    render();
+}
+window.dismissSubmissionNotice = dismissSubmissionNotice;
+async function refreshMyGroupsStatus() {
+    if (!state.userDisplayName) return;
+    try {
+        const approvedCount = state.groups.filter(g => g.authorName === state.userDisplayName).length;
+
+        const pendingQuery = query(collection(db, 'pendingGroups'), where('authorName', '==', state.userDisplayName));
+        const pendingSnap = await getDocs(pendingQuery);
+
+        state.myGroupsStatus = { pending: pendingSnap.size, approved: approvedCount };
+        if (state.activeTab === 'new') render();
+    } catch (error) {
+        console.error('Error fetching my groups status:', error);
+    }
+}
+function subscribeToGroups() {
+    if (unsubscribeGroups) {
+        unsubscribeGroups();
+        unsubscribeGroups = null;
+    }
+    if (unsubscribeSponsors) {
+        unsubscribeSponsors();
+        unsubscribeSponsors = null;
+    }
+    state.isLoading = true;
+    state.hasError = false;
+    state.showSpinner = true;
+    render();
+    
+const liveRef = doc(db, 'liveData', 'groups');
+    const sponsorsRef = doc(db, 'liveData', 'sponsors');
+
+    const slowConnectionTimer = setTimeout(() => {
+        if (state.isLoading) {
+            state.isLoading = false;
+            state.hasError = true;
+            state.showSpinner = false;
+            render();
+        }
+    }, 12000);
+
+    unsubscribeGroups = onSnapshot(liveRef, { includeMetadataChanges: true },
+        (docSnap) => {
+            clearTimeout(slowConnectionTimer);
+            const isFromCache = docSnap.metadata.fromCache;
+            if (!isFromCache) {
+                state.showSpinner = false;
+            }
+            
+state.groups = docSnap.exists() ? (docSnap.data().groups || []) : [];
+checkMySubmissionsStatus();
+if (state.userDisplayName) refreshMyGroupsStatus();
+state.isLoading = false;
+            state.hasError = false;
+            
+            render();
+        },
+        (error) => {
+            clearTimeout(slowConnectionTimer);
+            console.error('Error fetching groups:', error);
+            state.isLoading = false;
+            state.hasError = true;
+            state.showSpinner = false;
+            render();
+        }
+    );
+
+    unsubscribeSponsors = onSnapshot(sponsorsRef, { includeMetadataChanges: true },
+        (docSnap) => {
+            state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
+            render();
+        },
+        (error) => {
+            console.error('Error fetching sponsors:', error);
+        }
+    );
+
+    return unsubscribeGroups;
+}
+function subscribeToChannels() {
+    if (unsubscribeChannels) { unsubscribeChannels(); unsubscribeChannels = null; }
+    const liveRef = doc(db, 'liveData', 'channels');
+    unsubscribeChannels = onSnapshot(liveRef, { includeMetadataChanges: true },
+        (docSnap) => {
+            if (docSnap.metadata.fromCache && !docSnap.exists()) return;
+            state.channels = docSnap.exists() ? (docSnap.data().channels || []) : [];
+            if (state.activeTab === 'channels' || state.activeTab === 'bookmarks') render();
+            checkMySubmissionsStatus();
+        },
+        (error) => { console.error('Error fetching channels:', error); }
+    );
+    return unsubscribeChannels;
+}
+function getFeaturedGroups() {
+    return state.groups.filter(group => group.type === 'featured');}
+
+function getUserGroups() {
+    return state.groups.filter(group => group.type === 'user');}
+
+function getFilteredGroups() {
+    let items = [];
+    
+    switch(state.activeTab) {
+        case 'featured':
+            items = state.groups.filter(group => group.type === 'featured' || group.type === 'admin');
+            break;
+case 'new':
+            items = state.groups.filter(group => group.type === 'user' || group.type === 'user-added');
+            if (state.groupJoinTypeFilter === 'open') {
+                items = items.filter(g => (g.joinType || 'open') === 'open');
+            } else if (state.groupJoinTypeFilter === 'request') {
+                items = items.filter(g => g.joinType === 'request');
+            }
+            break;
+        case 'channels':
+            items = state.channels;
+            break;
+        case 'bookmarks':
+            return (window.BookmarkManager ? window.BookmarkManager.getBookmarkedItems(state.groups, state.channels) : []);
+        default:
+            return [];
+    }
+    
+    if ((state.activeTab === 'featured' || state.activeTab === 'new') && state.sponsors && state.sponsors.length > 0) {
+        const sponsorsWithType = state.sponsors.map(s => ({ ...s, type: 'sponsor' }));
+        items = [...items, ...sponsorsWithType];
+        items.sort((a, b) => {
+            const timeA = a.createdAt || 0;
+            const timeB = b.createdAt || 0;
+            return timeB - timeA;
+        });
+    }
+    return items;}
+function createGroupCard(group) {
+    const isAdminGroup = group.type === 'featured';
+    const userReportButton = group.type === 'user' ? `
+        <div class="group-report" style="margin-top: 12px; text-align: center;">
+            <button class="btn btn-icon" onclick="openReportModal('${group.id}')" >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                Report Group
+            </button>
+        </div>
+    ` : '';
+
+  const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+const typeBadge = isAdminGroup ? 
+    `<span class="type-badge featured">${verifiedIcon} Verified</span>` : 
+    `<span class="type-badge user">${verifiedIcon} Verified</span>`;
+
+    const authorDisplay = group.authorName ? `
+        <div class="group-author">
+            <span><strong>${escapeHtml(group.authorName)}</strong> 
+${group.createdAt ? `<span class="meta-dot">•</span><span>${formatDate(new Date(group.createdAt))}</span>` : ''}      </span>
+        </div>
+    ` : '';
+
+   const isBookmarked = BookmarkManager.isBookmarked(group.id, 'group');
+    const bookmarkIcon = isBookmarked ? `
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    ` : `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    `;
+
+    return `
+        <div class="group-card">
+            <div class="card-header">
+                <div class="header-left">
+ <div class="group-icon">
+    <img src="${group.iconUrl || 'icon.png'}" 
+         alt=""
+         onerror="this.onerror=null;this.src='icon.png';">
+</div>
+<div class="header-text">
+<h3 class="group-name">${escapeHtml(group.name)}</h3>
+${authorDisplay}
+</div></div>
+${typeBadge}
+</div>
+<p class="group-description">${escapeHtml(group.description || 'No description available')}</p>
+${createJoinTypePill(group)}
+<div class="card-meta-row">
+    <div class="meta-left">
+        ${icons.users}
+        <span>${group.members || 0} members</span>
+        ${group.country ? `
+            <span class="meta-dot">•</span>
+            <span class="country-chip">${getCountryFlag(group.country)} ${escapeHtml(getCountryName(group.country))}</span>
+        ` : ''}
+    </div>
+    <div class="meta-right">
+        ${group.category ? `<span class="category-chip">${escapeHtml(group.category)}</span>` : ''}
+        ${group.reported ? `<span class="reported-badge">Reported</span>` : ''}
+    </div>
+</div>
+
+            <div class="card-footer">
+                ${group.type === 'user' ? `
+                    <button class="footer-report-btn" onclick="openReportModal('${group.id}')">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                         Report
+                    </button>
+                ` : '<span></span>'}
+<button class="footer-bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" 
+onclick="toggleBookmark('${group.id}', 'group')" 
+id="bookmark-group-${group.id}" 
+aria-label="Bookmark group">
+${bookmarkIcon}
+ Bookmark
+</button>
+<a href="${escapeHtml(group.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
+${icons.whatsapp}
+ Join Group 
+</a>
+</div>
+        </div>
+    `;
+}
+function createJoinTypePill(group) {
+    const isRequest = group.joinType === 'request';
+    return `
+        <span class="join-type-pill ${isRequest ? 'request' : 'open'}">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                ${isRequest 
+                    ? '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>' 
+                    : '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>'}
+            </svg>
+            ${isRequest ? 'Request to Join' : 'Open to Join'}
+        </span>
+    `;
+}
+function createChannelCard(channel) {
+    const isBookmarked = BookmarkManager.isBookmarked(channel.id, 'channel');
+    const bookmarkIcon = isBookmarked ? `
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    ` : `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+    `;
+
+const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+
+    return `
+        <div class="group-card">
+            <div class="card-header">
+                <div class="header-left">
+                    <div class="group-icon">
+                        <img src="${channel.iconUrl || 'icon.png'}" alt="" onerror="this.onerror=null;this.src='icon.png';">
+                    </div>
+                    <div class="header-text">
+                        <h3 class="group-name">${escapeHtml(channel.name)}</h3>
+      <div class="group-author"><span>Channel ${channel.createdAt ? ` <span class="meta-dot">•</span> ${formatDate(new Date(channel.createdAt))}` : ''}</span></div>
+                    </div>
+                </div>
+                <span class="type-badge featured">${verifiedIcon} Verified</span>
+            </div>
+            <p class="group-description">${escapeHtml(channel.description || 'No description available')}</p>
+            <div class="card-meta-row">
+    <div class="meta-left">
+        ${icons.users}
+        <span>${channel.followers || 0} followers</span>
+    </div>
+</div>
+            <div class="card-footer">
+                <button class="footer-report-btn" onclick="openReportModal('${channel.id}', 'channel')">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    Report
+                </button>
+                <button class="footer-bookmark-btn ${isBookmarked ? 'bookmarked' : ''}"
+                    onclick="toggleBookmark('${channel.id}', 'channel')"
+                    id="bookmark-channel-${channel.id}"
+                    aria-label="Bookmark channel">
+                    ${bookmarkIcon} Bookmark
+                </button>
+                <a href="${escapeHtml(channel.link)}" target="_blank" rel="noopener noreferrer" class="footer-join-btn">
+                    ${icons.whatsapp} Explore
+                </a>
+            </div>
+        </div>
+    `;
+}
+function createSponsorCard(sponsor) {
+    return `
+        <div class="sponsor-card">
+            <div class="sponsor-image-wrapper">
+                ${sponsor.cover ? `<img class="sponsor-main-img" src="${escapeHtml(sponsor.cover)}" alt="" loading="lazy" onerror="this.style.display='none';">` : `<div class="sponsor-main-img sponsor-cover-fallback"></div>`}
+                ${sponsor.icon ? `<img class="sponsor-avatar-overlay" src="${escapeHtml(sponsor.icon)}" alt="" loading="lazy" onerror="this.style.display='none';">` : ''}
+            </div>
+            <div class="sponsor-header-row">
+                <div class="sponsor-title-group">
+                    <h3 class="sponsor-app-title">${escapeHtml(sponsor.name)}</h3>
+<span class="sponsor-ad-label">
+    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    Sponsored
+</span>
+   <span class="sponsor-app-desc">${escapeHtml(sponsor.description || 'Check out this amazing app')}</span>
+                    <span class="sponsor-title-badge">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+                        Available on Google Play
+                    </span>
+                </div>
+            </div>
+            <a href="${escapeHtml(sponsor.url)}" target="_blank" rel="noopener noreferrer" class="sponsor-install-btn">Install Now</a>
+        </div>
+    `;
+}
+let currentReportGroup = null;
+let currentReportType = 'group';
+function openReportModal(itemId, type = 'group') {
+    const source = type === 'channel' ? state.channels : state.groups;
+  const reportTitleEl = document.getElementById('report-modal-title');
+if (reportTitleEl) reportTitleEl.textContent = type === 'channel' ? 'Report Channel' : 'Report Group';
+    const group = source.find(g => g.id === itemId);
+    if (!group) return;
+    currentReportType = type;
+    currentReportGroup = itemId;
+    document.getElementById('report-group-id').value = itemId;
+    document.getElementById('report-group-name').textContent = `${type === 'channel' ? 'Channel: ' : 'Group: '}${group.name}`;
+    document.getElementById('report-group-link').textContent = group.link;
+    document.getElementById('report-feedback').value = '';
+    document.getElementById('report-email').value = '';
+    document.querySelectorAll('.report-reason-btn').forEach(btn => {
+        btn.classList.remove('active'); });
+    document.getElementById('report-modal').classList.add('active');
+    lockBodyScroll('modal');}
+function closeReportModal() {
+    document.getElementById('report-modal').classList.remove('active');
+    currentReportGroup = null;
+    checkAndUnlockBodyScroll();}
+
+function closeReportModalOnOverlay(e) {
+    if (e.target.classList.contains('modal-overlay')) {
+        closeReportModal();}}
+
+async function submitReport(e) {
+    e.preventDefault();
+    
+    const itemId = document.getElementById('report-group-id').value;
+    const feedback = document.getElementById('report-feedback').value.trim();
+    const email = document.getElementById('report-email').value.trim();
+    
+    if (!feedback) {
+        showToast('Please provide a reason for reporting', 'error');
+        return;
+    }
+    if (!itemId) {
+        showToast('Invalid item', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('report-submit-btn');
+    setButtonLoading(submitBtn, true);
+
+try {
+        await addDoc(collection(db, 'reports'), {
+            groupId: itemId,
+            itemType: currentReportType,
+            groupName: document.getElementById('report-group-name').textContent,
+            groupLink: document.getElementById('report-group-link').textContent,
+            reportedByName: 'Anonymous',
+            reportedByEmail: email || null,
+            reason: feedback,
+            status: 'pending',
+            createdAt: serverTimestamp()
+        });
+        
+        document.getElementById('report-modal').classList.remove('active');
+        showToast('Thank you for reporting.', 'success');
+    } catch (error) {
+        console.error('Error submitting report:', error);
+        showToast('Failed to submit report.', 'error');
+    } finally {
+        setButtonLoading(submitBtn, false);
+        setTimeout(() => {
+          checkAndUnlockBodyScroll();
+            }, 200);
+    }
+}
+function setButtonLoading(button, isLoading) {
+    if (!button) return;
+    if (isLoading) {
+        button.dataset.originalText = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="btn-spinner"></span>';
+    } else {
+        button.disabled = false;
+        if (button.dataset.originalText) {
+            button.innerHTML = button.dataset.originalText;
+            delete button.dataset.originalText;
+        }}}
+function selectReportReason(button, reason) {
+    const textarea = document.getElementById('report-feedback');
+    
+    document.querySelectorAll('.report-reason-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    button.classList.add('active');
+    
+    const messages = {
+        spam: 'Appears to be spamming or sending unsolicited messages.',
+        icon: 'Contains copyrighted icon.',
+        contents: 'Have changed its contents after approval and now contains contents against HeartLink rules.',
+        inappropriate: 'Contains inappropriate or offensive content.',
+        fake: 'Appears to be fake or impersonating another group.',
+        hate: 'Contains hate speech or discriminatory content.',
+        scam: 'Appears to be a scam or fraudulent.',
+        expired: 'Link is expired and i am unable to interact.',
+        adult: 'Contains adult contents which is harmful for human health.',
+        other: ''
+    };if (reason !== 'other') {textarea.value =messages[reason];} else {textarea.value = '';textarea.focus();}}
+
+function formatDate(date) { const now = new Date();  const diff = now - date; if (diff < 60 * 1000) return 'Just now'; if (diff < 60 * 60 * 1000) { const minutes = Math.floor(diff / (60 * 1000)); return `${minutes}m ago`;} if (diff < 24 * 60 * 60 * 1000) { const hours = Math.floor(diff / (60 * 60 * 1000));  return `${hours}h ago`;}if (diff < 7 * 24 * 60 * 60 * 1000) { const days = Math.floor(diff / (24 * 60 * 60 * 1000)); return `${days}d ago`;} return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });}
+
+function createEmptyState() {
+    const messages = {
+        featured: 'Explore Groups section or check back later!',
+        new: 'No user-added groups yet. Be the first to add one!',
+        channels: 'No channels yet. Be the first to add one!',
+        bookmarks: 'Bookmark keeps your chosen groups and channels separate from the rest!'};
+
+    const titles = {
+        bookmarks: 'No Bookmarks',
+        channels: 'No Channels Found'
+    };
+
+    return `
+<div class="empty-state">
+<div class="empty-icon">
+${state.activeTab === 'bookmarks' ? 
+`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:40px;height:40px;">
+<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+</svg>` :
+icons.group}
+</div>
+<h3 class="empty-title">${titles[state.activeTab] || 'No Groups Found'}</h3>
+<p class="empty-text">
+${messages[state.activeTab] || 'No groups available at the moment.'}
+</p>
+</div>
+`;}
+function createCongratsBanner() {
+    if (!state.congratsNotice) return '';
+    const item = state.congratsNotice;
+    const isApproved = item.status === 'approved';
+    const verifiedIcon = `<svg class="verified-badge-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.18L12 3 8.6 1.52 6.71 4.7 3.1 5.52l.34 3.69L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.48 12 21l3.4 1.48 1.89-3.18 3.61-.82-.34-3.7L23 12z" fill="url(#verifiedBadgeGradient)"/><path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#ffffff"/></svg>`;
+    
+    const rejectedIcon = `<svg class="congrats-icon-svg rejected-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+
+    const iconHtml = isApproved ? verifiedIcon : rejectedIcon;
+
+    return `
+        <div class="congrats-banner ${isApproved ? 'approved' : 'rejected'}">
+            <div class="congrats-icon-wrapper">${iconHtml}</div>
+            <div class="congrats-text">
+                <p class="congrats-title">${isApproved ? 'Congratulations!' : 'Submission Update'}</p>
+                <p class="congrats-desc">
+                    ${isApproved 
+                        ? `Your ${item.type === 'channel' ? 'channel' : 'group'} is now live and approved!` 
+                        : `Your ${item.type === 'channel' ? 'channel' : 'group'} submission wasn't approved this time.`}
+                </p>
+            </div>
+            <button class="congrats-dismiss" onclick="dismissSubmissionNotice('${item.id}')">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+    `;
+}
+function updateHeaderSpinner(show) {
+    const wrapper = document.getElementById('inline-spinner-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.toggle('hidden', !show);
+}
+function renderGroupsBody() {
+    const filteredGroups = getFilteredGroups();
+    const statsCount = filteredGroups.filter(g => g.type !== 'sponsor').length;
+const totalMembers = filteredGroups.reduce((sum, g) => sum + (g.members || 0), 0);
+    BookmarkManager.updateBookmarkCount();
+    const showSpinner = state.activeTab === 'new' && state.showSpinner;
+    let statsHtml = `
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-info">
+         <h3>${statsCount}</h3>
+     <p>${state.activeTab === 'bookmarks' ? 'Bookmarked Items' : state.activeTab === 'channels' ? 'Active Channels' : 'Active Groups'}</p>
+                </div>
+            </div>
+    `;
+    
+    if (state.activeTab === 'new' && state.userDisplayName) {
+        statsHtml += `
+            <div class="stat-card">
+                <div class="stat-info"><h3>${state.myGroupsStatus.pending}</h3><p>Pending Review</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info"><h3>${state.myGroupsStatus.approved}</h3><p>Your Approved</p></div>
+            </div>
+        `;
+    }
+    statsHtml += `</div>`;
+   const congratsBannerHtml = createCongratsBanner();
+  
+let sectionHeaderHtml = `
+        <div class="section-header">
+            <div class="section-header-left">
+                <h2 class="section-title">
+                    ${state.activeTab === 'featured' ? 'Featured Groups' :
+                      state.activeTab === 'new' ? 'Groups' :
+                      state.activeTab === 'channels' ? 'Channels' :
+                      state.activeTab === 'bookmarks' ? 'Your Bookmarks' : 'Groups'}
+                </h2>
+            </div>
+            <div class="section-header-right"></div>
+        </div>
+    `;
+
+    updateHeaderSpinner(showSpinner);
+
+    let groupsHtml = '';
+    if (filteredGroups.length === 0 && !showSpinner) {
+        groupsHtml = createEmptyState();
+    } else if (filteredGroups.length > 0) {
+        groupsHtml = filteredGroups.map(g => {
+            if (g.type === 'channel' && typeof window.createChannelCard === 'function') {
+                return window.createChannelCard(g);
+            } else if (g.type === 'sponsor') {
+                return createSponsorCard(g);
+            } else {
+                return createGroupCard(g);
+            }
+        }).join('');
+    }
+
+return `
+        ${statsHtml}
+        ${state.activeTab === 'new' ? createJoinTypeFilterBar() : ''}
+      ${createCongratsBanner()}
+        ${sectionHeaderHtml}
+        <div class="groups-grid">
+            ${groupsHtml}
+        </div>
+    `;}
+function createJoinTypeFilterBar() {
+    const labels = { all: 'All Groups', open: 'Open to Join', request: 'Request to Join' };
+    const activeLabel = labels[state.groupJoinTypeFilter] || 'All Groups';
+    return `
+        <div class="join-filter-bar" onclick="openJoinTypeFilterDialog()">
+            <span class="join-filter-label">${activeLabel}</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+            </svg>
+        </div>
+    `;
+}
+
+function render() {
+    if (state.activeTab === 'notice') {
+        if (window.renderNotice && document.getElementById('groups-body')) {
+            const body = document.getElementById('groups-body');
+            if (body && !body.querySelector('.notice-content')) {
+                window.renderNotice();
+            }
+        }
+        if (typeof window.updateSearchVisibility === 'function') {
+            window.updateSearchVisibility();
+        }
+        return;
+    }
+    
+    if (state.hasError) {
+        if (window.AppUI) {
+            window.AppUI.showError(
+                'Slow or no internet connection. Please check your network and try again.',
+                () => subscribeToGroups()
+            );
+        }
+        return;
+    }
+    
+    if (window.AppUI) {
+        window.AppUI.renderGroups(renderGroupsBody());
+    }
+}
+
+function openAddModal() {
+    document.getElementById('modal-title').textContent = 'Add New Group';
+    document.getElementById('modal-submit-btn').textContent = 'Submit for Review';
+    document.getElementById('group-form').reset();
+    state.addModalMode = 'group';
+document.getElementById('group-modal').classList.remove('channel-mode');
+document.getElementById('modal-title').textContent = 'Add New Group';
+document.querySelector('label[for="group-name"]').textContent = 'Group Name';
+document.querySelector('label[for="group-link"]').textContent = 'Group Link';
+  document.querySelector('label[for="group-description"]').textContent = 'Group description...'; 
+    selectedCategory = '';
+    document.getElementById('group-category').value = '';
+    document.getElementById('category-placeholder').textContent = 'Select a category';
+    document.getElementById('category-placeholder').classList.remove('selected');
+        selectedCountry = '';
+    document.getElementById('group-country').value = '';
+    document.getElementById('country-placeholder').textContent = 'Select a country';
+    document.getElementById('country-placeholder').classList.remove('selected');
+    const countrySel = document.getElementById('country-selector');
+    const categorySel = document.getElementById('category-selector');
+    const nameF = document.getElementById('group-name');
+    const linkF = document.getElementById('group-link');
+    if (countrySel) countrySel.style.borderColor = '';
+    if (categorySel) categorySel.style.borderColor = '';
+    if (nameF) nameF.style.borderColor = '';
+    if (linkF) linkF.style.borderColor = '';
+    selectedIconUrl = '';
+    document.getElementById('group-icon-url').value = '';
+    if (typeof updateFinalIconPreview === 'function') updateFinalIconPreview('');
+const authorNameField = document.getElementById('author-name');
+    const authorSection = document.querySelector('.author-input-section');
+    const authorPill = document.getElementById('author-pill');
+    const authorPillName = document.getElementById('author-pill-name');
+    const hasLockedName = !!state.userDisplayName;
+
+    if (authorNameField) {
+        authorNameField.value = state.userDisplayName || '';
+        authorNameField.disabled = hasLockedName;}
+
+    if (hasLockedName) {
+        if (authorSection) authorSection.style.display = 'none';
+        if (authorPill) authorPill.style.display = 'flex';
+        if (authorPillName) authorPillName.textContent = state.userDisplayName;
+    } else {
+        if (authorSection) authorSection.style.display = '';
+        if (authorPill) authorPill.style.display = 'none';
+        const infoEl = document.querySelector('.author-info');
+  if (infoEl) infoEl.textContent = 'Display name editing will lock once set.';
+    }
+    const indicator = document.getElementById('name-check-indicator');
+    if (indicator) { indicator.className = 'name-check-indicator'; indicator.innerHTML = ''; }
+    if (!state.userDisplayName && authorNameField) authorNameField.style.borderColor = '';
+    nameAvailability = { name: '', available: null };
+    document.getElementById('group-modal').classList.add('active');
+       const followersWrap = document.getElementById('channel-followers-wrap');
+    if (followersWrap) {
+        followersWrap.style.display = 'none';}
+    lockBodyScroll('modal'); 
+  if (typeof prepareInterstitial === 'function') prepareInterstitial();}
+function openAddChannelModal() {
+    state.addModalMode = 'channel';
+    document.getElementById('modal-title').textContent = 'Add New Channel';
+    document.getElementById('modal-submit-btn').textContent = 'Submit for Review';
+    document.getElementById('group-form').reset();
+    document.getElementById('group-modal').classList.add('channel-mode');
+    document.querySelector('label[for="group-name"]').textContent = 'Channel Name';
+    document.querySelector('label[for="group-link"]').textContent = 'Channel Link';
+    document.querySelector('label[for="group-description"]').textContent = 'Channel description...';
+    const followersWrap = document.getElementById('channel-followers-wrap');
+    if (followersWrap) {
+        followersWrap.style.display = 'block';
+    }
+    
+    selectedIconUrl = '';
+    document.getElementById('group-icon-url').value = '';
+    if (typeof updateFinalIconPreview === 'function') updateFinalIconPreview('');
+
+    const nameF = document.getElementById('group-name');
+    const linkF = document.getElementById('group-link');
+    if (nameF) nameF.style.borderColor = '';
+    if (linkF) linkF.style.borderColor = '';
+
+    document.getElementById('group-modal').classList.add('active');
+    lockBodyScroll('modal');
+}
+window.openAddChannelModal = openAddChannelModal;
+function closeModal() {
+    document.getElementById('group-modal').classList.remove('active');
+    const followersWrap = document.getElementById('channel-followers-wrap');
+    if (followersWrap) {
+        followersWrap.style.display = 'none';
+    }
+    
+    checkAndUnlockBodyScroll();
+}
+
+function closeModalOnOverlay(e) {
+    if (e.target.classList.contains('modal-overlay')) {
+        closeModal();}}
+
+function switchTab(tab) {
+    if (!tab || tab === 'notice') return;
+    if (tab !== 'new') {
+        state.groupJoinTypeFilter = 'all';
+    }
+    state.activeTab = tab;
+    if (tab === 'channels' && !channelsSubscribed) {
+        channelsSubscribed = true;
+        subscribeToChannels();
+    }
+    if (window.AppUI) window.AppUI.setActiveTab(tab);
+    render();
+}
+function syncTabState(tab) {
+    if (!tab) return;
+    state.activeTab = tab;}
+let recentSubmissions = new Map();
+async function checkDuplicateGroupLink(link) {
+    try {
+        const normalizedLink = normalizeWhatsAppLink(link);
+        const existsInLive = state.groups.some(g => normalizeWhatsAppLink(g.link) === normalizedLink);
+
+        const pendingQuery = query(collection(db, 'pendingGroups'), where('link', '==', normalizedLink));
+        const pendingSnap = await getDocs(pendingQuery);
+
+        return existsInLive || !pendingSnap.empty;
+    } catch (error) {
+        console.error('Error checking duplicate link:', error);
+        return false;}}
+
+async function isUrlBanned(link) {
+    try {
+        const normalizedLink = normalizeWhatsAppLink(link).toLowerCase();
+        const bannedSnap = await getDocs(collection(db, 'bannedUrls'));
+        for (const docSnap of bannedSnap.docs) {
+            const bannedUrl = (docSnap.data().url || '').toLowerCase().trim();
+            if (bannedUrl && normalizedLink.includes(bannedUrl)) {
+                return { banned: true, reason: docSnap.data().reason || null };
+            }
+        }
+        return { banned: false };
+    } catch (error) {
+        console.error('Error checking banned URL:', error);
+        return { banned: false };}}
+
+function checkRateLimit(userIP) {
+const now = Date.now();
+const userSubmissions = recentSubmissions.get(userIP) || [];
+const recentSubs = userSubmissions.filter(time => now - time < 60 * 60 * 1000);
+if (recentSubs.length >= 5) {
+return {
+allowed: false,
+message: 'limit exceeded: Maximum 5 groups per hour'};}
+    if (recentSubs.length > 0) {
+        const lastSubmission = recentSubs[recentSubs.length - 1];
+        if (now - lastSubmission < 30 * 1000) {
+return {
+allowed: false,
+message: 'Please wait 30 seconds before adding another group'};}}return { allowed: true };}
+
+function normalizeWhatsAppLink(link) {
+    if (!link) return '';
+    let normalized = link.trim().replace(/\/+$/, '');
+    const whatsappPattern = /(?:chat\.whatsapp\.com|whatsapp\.com\/channel)\/([A-Za-z0-9_-]+)/;
+    const match = link.match(whatsappPattern);
+    if (match && match[1]) {
+        return `https://chat.whatsapp.com/${match[1]}`;
+    }
+    return normalized.toLowerCase();
+}
+
+function validateWhatsAppLink(link) {
+    if (!link) return { valid: false, message: 'Link is required' };
+    
+    try {
+        new URL(link);
+    } catch {
+        return { valid: false, message: 'Please enter a valid URL' };
+    }
+    
+    const whatsappPatterns = [
+        /^https?:\/\/(?:chat\.)?whatsapp\.com\/(?:invite\/)?[A-Za-z0-9_-]+/,
+        /^https?:\/\/whatsapp\.com\/channel\/[A-Za-z0-9_-]+/,
+        /^https?:\/\/(?:www\.)?whatsapp\.com\/(?:g\/)?[A-Za-z0-9_-]+/
+    ];
+    
+    const isValid = whatsappPatterns.some(pattern => pattern.test(link));
+    if (!isValid) {
+        return { valid: false, message: 'Please enter a valid WhatsApp group link' };
+    }
+    
+    const spamPatterns = [
+        /bit\.ly|tinyurl|goo\.gl|ow\.ly|t\.co|is\.gd|buff\.ly|adf\.ly/i,
+        /spam|advertise|promote|buy|sell|money|earn|profit/i
+    ];
+    
+    for (const pattern of spamPatterns) {
+        if (pattern.test(link)) {
+            return { valid: false, message: 'Suspicious link detected. Please use direct WhatsApp links only.' };
+        }
+    }
+    
+    return { valid: true };
+}
+
+async function addGroupWithSpamProtection(groupData) {
+    try {
+        const linkValidation = validateWhatsAppLink(groupData.link);
+        if (!linkValidation.valid) {
+            showToast(linkValidation.message, 'error');
+            return false;
+        }
+
+        const banCheck = await isUrlBanned(groupData.link);
+        if (banCheck.banned) {
+            showToast('Link is blocked by system', 'error');
+            return false;
+        }
+        
+        const isDuplicate = await checkDuplicateGroupLink(groupData.link);
+        if (isDuplicate) {
+            showToast('link is already added', 'error');
+            return false;
+        }
+        
+        const userIP = 'anonymous';
+        const rateLimit = checkRateLimit(userIP);
+        if (!rateLimit.allowed) {
+            showToast(rateLimit.message, 'error');
+            return false;
+        }
+        
+        let groupToAdd = {
+            ...groupData,
+            link: normalizeWhatsAppLink(groupData.link),
+            createdAt: serverTimestamp(),
+            type: 'user',
+            reported: false,
+            verified: false
+        };
+
+        if (groupData.authorName && groupData.authorName.trim()) {
+            groupToAdd.authorName = groupData.authorName.trim();
+        } else {
+            groupToAdd.authorName = 'Anonymous';
+        }
+
+const groupDocRef = await addDoc(collection(db, 'pendingGroups'), groupToAdd);
+        trackMySubmission(groupDocRef.id, 'group', groupToAdd.link);   
+        const userSubmissions = recentSubmissions.get(userIP) || [];
+        userSubmissions.push(Date.now());
+        recentSubmissions.set(userIP, userSubmissions);
+        
+        setTimeout(() => {
+            const now = Date.now();
+            const updated = userSubmissions.filter(time => now - time < 60 * 60 * 1000);
+            if (updated.length === 0) {
+                recentSubmissions.delete(userIP);
+            } else {
+                recentSubmissions.set(userIP, updated);
+            }
+        }, 60 * 60 * 1000);
+        
+        showToast('Submitted! Your group will appear after team review.', 'success');
+        refreshMyGroupsStatus();
+        return true;
+    } catch (error) {
+        console.error('Error adding group with spam protection:', error);
+        showToast('Failed to add group. Please try again.', 'error');
+        return false;
+    }
+}
+function validateWhatsAppChannelLink(link) {
+    if (!link) return { valid: false, message: 'Link is required' };
+    try { new URL(link); } catch { return { valid: false, message: 'Please enter a valid URL' }; }
+    const channelPattern = /^https?:\/\/(?:www\.)?whatsapp\.com\/channel\/[A-Za-z0-9_-]+/;
+    if (!channelPattern.test(link)) {
+        return { valid: false, message: 'Please enter a valid WhatsApp channel link' };
+    }
+    const spamPatterns = [
+        /bit\.ly|tinyurl|goo\.gl|ow\.ly|t\.co|is\.gd|buff\.ly|adf\.ly/i,
+        /spam|advertise|promote|buy|sell|money|earn|profit/i
+    ];
+    for (const pattern of spamPatterns) {
+        if (pattern.test(link)) return { valid: false, message: 'Suspicious link detected.' };
+    }
+    return { valid: true };
+}
+
+function normalizeChannelLink(link) {
+    if (!link) return '';
+    const pattern = /whatsapp\.com\/channel\/([A-Za-z0-9_-]+)/;
+    const match = link.match(pattern);
+    if (match && match[1]) return `https://whatsapp.com/channel/${match[1]}`;
+    return link.trim().replace(/\/+$/, '').toLowerCase();
+}
+
+async function checkDuplicateChannelLink(link) {
+    try {
+        const normalized = normalizeChannelLink(link);
+        const existsInLive = state.channels.some(c => normalizeChannelLink(c.link) === normalized);
+        const pendingQuery = query(collection(db, 'pendingChannels'), where('link', '==', normalized));
+        const pendingSnap = await getDocs(pendingQuery);
+        return existsInLive || !pendingSnap.empty;
+    } catch (error) {
+        console.error('Error checking duplicate channel link:', error);
+        return false;
+    }
+}
+
+let recentChannelSubmissions = new Map();
+function checkChannelRateLimit(userIP) {
+    const now = Date.now();
+    const subs = recentChannelSubmissions.get(userIP) || [];
+    const recent = subs.filter(t => now - t < 60 * 60 * 1000);
+    if (recent.length >= 5) return { allowed: false, message: 'Limit exceeded: Maximum 5 channels per hour' };
+    if (recent.length > 0 && now - recent[recent.length - 1] < 30 * 1000) {
+        return { allowed: false, message: 'Please wait 30 seconds before adding another channel' };
+    }
+    return { allowed: true };
+}
+
+async function addChannelWithSpamProtection(channelData) {
+    try {
+        const linkValidation = validateWhatsAppChannelLink(channelData.link);
+        if (!linkValidation.valid) { showToast(linkValidation.message, 'error'); return false; }
+
+        const banCheck = await isUrlBanned(channelData.link);
+        if (banCheck.banned) { showToast('Link is blocked by system', 'error'); return false; }
+
+        const isDuplicate = await checkDuplicateChannelLink(channelData.link);
+        if (isDuplicate) { showToast('This channel is already added', 'error'); return false; }
+
+        const userIP = 'anonymous';
+        const rateLimit = checkChannelRateLimit(userIP);
+        if (!rateLimit.allowed) { showToast(rateLimit.message, 'error'); return false; }
+
+const channelToAdd = {
+    name: channelData.name,
+    link: normalizeChannelLink(channelData.link),
+    description: channelData.description || '',
+    iconUrl: channelData.iconUrl || null,
+    followers: channelData.followers || 0,
+    createdAt: serverTimestamp(),
+    type: 'channel',
+    reported: false
+};
+
+const channelDocRef = await addDoc(collection(db, 'pendingChannels'), channelToAdd);
+        trackMySubmission(channelDocRef.id, 'channel', channelToAdd.link);
+
+        const subs = recentChannelSubmissions.get(userIP) || [];
+        subs.push(Date.now());
+        recentChannelSubmissions.set(userIP, subs);
+        setTimeout(() => {
+            const now = Date.now();
+            const updated = subs.filter(t => now - t < 60 * 60 * 1000);
+            if (updated.length === 0) recentChannelSubmissions.delete(userIP);
+            else recentChannelSubmissions.set(userIP, updated);
+        }, 60 * 60 * 1000);
+
+        showToast('Submitted! Your channel will appear after team review.', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error adding channel:', error);
+        showToast('Failed to add channel. Please try again.', 'error');
+        return false;
+    }
+}
+async function handleGroupSubmit(e) {
+    e.preventDefault();
+
+    const submitBtn = document.getElementById('modal-submit-btn');
+    if (submitBtn.disabled) return;
+    setButtonLoading(submitBtn, true);
+if (state.addModalMode === 'channel') {
+        try {
+const channelData = {
+    name: document.getElementById('group-name').value.trim(),
+    link: document.getElementById('group-link').value.trim(),
+    description: document.getElementById('group-description').value.trim(),
+    iconUrl: document.getElementById('group-icon-url').value.trim() || null,
+    followers: parseInt(document.getElementById('channel-followers').value) || 0
+};
+            const nameField = document.getElementById('group-name');
+            const linkField = document.getElementById('group-link');
+
+            if (!channelData.name || channelData.name.length < 3) {
+                showToast('Channel name must be at least 3 characters', 'error');
+                if (nameField) nameField.style.borderColor = 'var(--danger)';
+                return;
+            }
+            if (nameField) nameField.style.borderColor = '';
+
+            if (!channelData.link) {
+                showToast('WhatsApp channel link is required', 'error');
+                if (linkField) linkField.style.borderColor = 'var(--danger)';
+                return;
+            }
+            if (linkField) linkField.style.borderColor = '';
+
+            const success = await addChannelWithSpamProtection(channelData);
+            if (success) {
+                document.getElementById('group-modal').classList.remove('active');
+                setTimeout(() => { checkAndUnlockBodyScroll(); }, 200);
+            }
+        } catch (error) {
+            console.error('Error submitting channel:', error);
+            showToast('Failed to submit channel. Please try again.', 'error');
+        } finally {
+            setButtonLoading(submitBtn, false);
+        }
+        return;
+    }
+    try {
+        const authorNameInput = document.getElementById('author-name');
+        const typedName = authorNameInput ? authorNameInput.value.trim() : '';
+
+        if (!state.userDisplayName && typedName) {
+            let isDuplicateName;
+            if (nameAvailability.name === typedName && nameAvailability.available !== null) {
+                isDuplicateName = !nameAvailability.available;
+            } else {
+                isDuplicateName = await checkDuplicateDisplayName(typedName);
+            }
+
+            if (isDuplicateName) {
+                showToast('Display name is already taken. Choose another.', 'error');
+                authorNameInput.style.borderColor = 'var(--danger)';
+                return;
+            }
+        }
+
+        const authorName = state.userDisplayName || typedName;
+
+        if (!state.userDisplayName && typedName && typedName !== 'Anonymous') {
+            state.userDisplayName = typedName;
+            localStorage.setItem('userDisplayName', typedName);
+        }
+
+        const groupData = {
+    name: document.getElementById('group-name').value.trim(),
+    link: document.getElementById('group-link').value.trim(),
+    description: document.getElementById('group-description').value.trim(),
+    members: parseInt(document.getElementById('group-members').value) || 0,
+    category: document.getElementById('group-category').value,
+    country: document.getElementById('group-country').value, 
+    iconUrl: document.getElementById('group-icon-url').value.trim() || null,
+    authorName: authorName || 'Anonymous'
+};
+
+const countrySelector = document.getElementById('country-selector');
+const categorySelector = document.getElementById('category-selector');
+const nameField = document.getElementById('group-name');
+const linkField = document.getElementById('group-link');
+
+if (!groupData.country) {
+    showToast('Please select a country', 'error');
+    if (countrySelector) countrySelector.style.borderColor = 'var(--danger)';
+    return;
+}
+if (countrySelector) countrySelector.style.borderColor = '';
+
+if (!groupData.category) {
+    showToast('Please select a category', 'error');
+    if (categorySelector) categorySelector.style.borderColor = 'var(--danger)';
+    return;
+}
+if (categorySelector) categorySelector.style.borderColor = '';
+
+if (!groupData.name || groupData.name.length < 3) {
+    showToast('Group name must be at least 3 characters', 'error');
+    if (nameField) nameField.style.borderColor = 'var(--danger)';
+    return;
+}
+if (nameField) nameField.style.borderColor = '';
+
+if (!groupData.link) {
+    showToast('WhatsApp link is required', 'error');
+    if (linkField) linkField.style.borderColor = 'var(--danger)';
+    return;
+}
+if (linkField) linkField.style.borderColor = '';
+
+const success = await addGroupWithSpamProtection(groupData);
+if (success) {
+document.getElementById('group-modal').classList.remove('active');
+setTimeout(() => { checkAndUnlockBodyScroll(); }, 200);
+if (typeof showInterstitialAfterSubmit === 'function') {
+setTimeout(() => { showInterstitialAfterSubmit(); }, 500);}}} catch (error) {
+console.error('Error submitting group:', error);
+showToast('Failed to submit group. Please try again.', 'error');
+    } finally {
+setButtonLoading(submitBtn, false);
+    }}
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showToast(message, type = 'success') {
+    if (window.AppUI) window.AppUI.showToast(message, type);
+}
+function initWhatsAppApp() {
+    const activeTab = document.querySelector('#tabs-list .tab.active');
+    let currentTab = 'featured';
+    if (state.userDisplayName) refreshMyGroupsStatus();
+    if (activeTab) {
+        currentTab = activeTab.dataset.tab || 'featured';
+    }
+    if (currentTab === 'notice') {
+        state.activeTab = 'notice';
+        subscribeToGroups();
+        return;
+    }
+    if (window.AppUI && window.getActiveTab) {
+        state.activeTab = window.getActiveTab() || 'featured';
+    } else {
+        state.activeTab = 'featured';
+    }
+    render();
+    subscribeToGroups();
+  setupDisplayNameLiveCheck();
+const sponsorsRef = doc(db, 'liveData', 'sponsors');
+onSnapshot(sponsorsRef, (docSnap) => {
+    state.sponsors = docSnap.exists() ? (docSnap.data().sponsors || []) : [];
+});
+}
+
+function initPromo() {
+    const promo = document.getElementById('mypromo');
+    if (!promo) return;
+
+    promo.style.cssText = 'display:none;width:100%; background: var(--card-header);border-radius: var(--radius-lg);box-shadow: var(--shadow-sm);border: .5px solid var(--border);transition: var(--transition);margin-top: 5px;margin-bottom: 10px;padding: 5px;';
+    const promobanner = document.createElement('div');
+    promobanner.style.cssText = 
+    'display:flex;align-items:center;justify-content:space-between;padding:5px;background: var(--bg-card);border-radius:12px;gap:12px; border: 1px solid var(--border-light);width:100%;';
+    const left = document.createElement('div');
+    left.style.cssText = 'display:flex;align-items:center;gap:12px;';
+    const img = document.createElement('img');
+    img.src = 'hq.jpg';
+    img.width = 40;
+    img.className = 'promoImg';
+    img.height = 40;
+    img.style.borderRadius = '10px';
+    const textWrap = document.createElement('div');
+    textWrap.style.cssText = 'display:flex;flex-direction:column;gap:0px;';
+    const appName = document.createElement('div');
+    appName.textContent = 'Heartquote';
+    appName.style.cssText = 'font-size:13px;font-weight:bold;color: var(--text-primary);';
+    const desc = document.createElement('div');
+    desc.textContent = 'Offline quotes and poetry in 7 languages';
+    desc.style.cssText = 'font-size:10px;color: var(--text-secondary); overflow-wrap:break-word;';
+    const btn = document.createElement('button');
+    btn.textContent = 'Install';
+    btn.className = 'promoBtn';
+    btn.style.cssText = 'background: var(--tab-active-bg);border:var(--border);padding:8px 20px;border-radius:20px;font-weight:bold;color: var(--white);cursor:pointer;flex-shrink:0; box-shadow: 0 0 0 1px var(--card-bg), 0 0 0 2px var(--tab-active-bg);';
+    btn.onclick = () => window.open('https://play.google.com/store/apps/details?id=com.heartquote', '_blank');
+    textWrap.appendChild(appName);
+    textWrap.appendChild(desc);
+    left.appendChild(img);
+    left.appendChild(textWrap);
+    promobanner.appendChild(left);
+    promobanner.appendChild(btn);
+    promo.appendChild(promobanner);}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWhatsAppApp);
+    document.addEventListener('DOMContentLoaded', initPromo);
+} else {
+    initWhatsAppApp();
+    initPromo();
+}
+async function checkDuplicateDisplayName(displayName) {
+    try {
+        const normalizedName = displayName.trim().toLowerCase();
+        const existsInLive = state.groups.some(g => 
+            g.authorName && g.authorName.trim().toLowerCase() === normalizedName
+        );
+        
+        if (existsInLive) {
+            console.log('Display name found in live groups:', displayName);
+            return true;
+        }
+        const pendingQuery = query(
+            collection(db, 'pendingGroups'), 
+            where('authorName', '==', displayName.trim())
+        );
+        const pendingSnap = await getDocs(pendingQuery);
+        
+        if (!pendingSnap.empty) {
+            console.log('Display name found in pending groups:', displayName);
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error checking duplicate display name:', error);
+        return false;
+    }}
+
+let nameCheckTimeout = null;
+let nameCheckToken = 0;
+let nameAvailability = { name: '', available: null };
+
+function setupDisplayNameLiveCheck() {
+    const input = document.getElementById('author-name');
+    const indicator = document.getElementById('name-check-indicator');
+    if (!input || !indicator) return;
+
+    input.addEventListener('input', () => {
+        clearTimeout(nameCheckTimeout);
+        indicator.className = 'name-check-indicator';
+        input.style.borderColor = '';
+        nameAvailability = { name: '', available: null };
+
+        if (state.userDisplayName) return;
+
+        const typed = input.value.trim();
+        if (!typed || typed.length < 2) return;
+
+        nameCheckTimeout = setTimeout(async () => {
+            const myToken = ++nameCheckToken;
+            indicator.className = 'name-check-indicator checking';
+
+            const isDuplicate = await checkDuplicateDisplayName(typed);
+            if (myToken !== nameCheckToken) return;
+            nameAvailability = { name: typed, available: !isDuplicate };
+
+            if (isDuplicate) {
+                indicator.className = 'name-check-indicator taken';
+                indicator.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+                input.style.borderColor = 'var(--danger)';
+            } else {
+                indicator.className = 'name-check-indicator available';
+                indicator.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                input.style.borderColor = 'var(--success)';
+            }
+        }, 1500); });}
+   (function() {
+    setTimeout(function() {
+        const existing = document.getElementById('ios-modal-wrapper');
+        if (existing) existing.remove();
+
+        const CONFIG = {
+            latestVersion: "1.4.0",
+            minRequiredVersion: "1.0.0",
+            playStoreUrl: "https://play.google.com/store/apps/details?id=com.heartquotelabs.heartlink",
+            title: "Update Available",
+            msgOptional: "A new version is available with fresh features. Would you like to update now?",
+            msgForce: "Your app version is no longer supported. Please update to the latest version to continue."
+        };
+
+        function compareVersions(v1, v2) {
+            const parts1 = v1.split('.').map(num => parseInt(num, 10));
+            const parts2 = v2.split('.').map(num => parseInt(num, 10));
+            const maxLength = Math.max(parts1.length, parts2.length);
+
+            for (let i = 0; i < maxLength; i++) {
+                const num1 = i < parts1.length ? parts1[i] : 0;
+                const num2 = i < parts2.length ? parts2[i] : 0;
+                if (num1 > num2) return 1;
+                if (num1 < num2) return -1;
+            }
+            return 0;
+        }
+
+        const current = window.APP_CURRENT_VERSION || "0.0.0";
+
+        console.log(`[Update Check] Current: ${current}, Latest: ${CONFIG.latestVersion}, Min Required: ${CONFIG.minRequiredVersion}`);
+
+        if (compareVersions(current, CONFIG.latestVersion) >= 0) {
+            console.log('[Update Check] Version is up to date. Modal not shown.');
+            return;
+        }
+
+        const isForceUpdate = compareVersions(current, CONFIG.minRequiredVersion) < 0;
+        console.log(`[Update Check] Force update required: ${isForceUpdate}`);
+
+        if (!document.getElementById('ios-update-styles')) {
+            const style = document.createElement('style');
+            style.id = 'ios-update-styles';
+            style.textContent = `
+                #ios-modal-wrapper {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.4);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999999;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    touch-action: none;
+                }
+                .ios-alert {
+                    width: 270px;
+                    background: rgba(255, 255, 255, 0.98);
+                    border-radius: 14px;
+                    overflow: hidden;
+                    text-align: center;
+                    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+                    animation: ios-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    backdrop-filter: blur(0px);
+                }
+                @keyframes ios-in {
+                    from { 
+                        transform: scale(0.96); 
+                        opacity: 0;
+                    }
+                    to { 
+                        transform: scale(1); 
+                        opacity: 1;
+                    }
+                }
+                .ios-body {
+                    padding: 20px 16px 18px 16px;
+                    background: #ffffff;
+                }
+                .ios-title {
+                    font-weight: 600;
+                    font-size: 17px;
+                    margin-bottom: 8px;
+                    color: #000000;
+                    letter-spacing: -0.02em;
+                    line-height: 1.3;
+                }
+                .ios-msg {
+                    font-size: 13px;
+                    color: #8e8e93;
+                    line-height: 1.4;
+                    letter-spacing: -0.01em;
+                }
+                .ios-footer {
+                    display: flex;
+                    height: 44px;
+                    align-items: stretch;
+                    border-top: 0.5px solid #c6c6c8;
+                    background: #ffffff;
+                }
+                .ios-btn {
+                    flex: 1;
+                    border: none;
+                    font-size: 17px;
+                    cursor: pointer;
+                    outline: none;
+                    height: 44px;
+                    border-radius: 0px;
+                    background: #ffffff;
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    -webkit-tap-highlight-color: transparent;
+                    transition: background 0.1s ease;
+                    font-weight: 500;
+                    letter-spacing: -0.02em;
+                }
+                .ios-btn:active {
+                    background: #e5e5ea;
+                }
+                .btn-later {
+                    color: #007aff;
+                    border-right: 0.5px solid #c6c6c8;
+                    font-weight: 500;
+                }
+                .btn-update {
+                    color: #007aff;
+                    font-weight: 600;
+                }
+                .btn-force {
+                    color: #007aff;
+                    font-weight: 600;
+                    width: 100%;
+                    background: #ffffff;
+                }
+                .btn-force:active {
+                    background: #e5e5ea;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'ios-modal-wrapper';
+
+        const message = isForceUpdate ? CONFIG.msgForce : CONFIG.msgOptional;
+        const footerHtml = isForceUpdate 
+            ? `<button class="ios-btn btn-force" id="update-action">Update Now</button>`
+            : `<button class="ios-btn btn-later" id="later-action">Later</button>
+               <button class="ios-btn btn-update" id="update-action">Update</button>`;
+
+        wrapper.innerHTML = `
+            <div class="ios-alert">
+                <div class="ios-body">
+                    <div class="ios-title">${CONFIG.title}</div>
+                    <div class="ios-msg">${message}</div>
+                </div>
+                <div class="ios-footer">${footerHtml}</div>
+            </div>
+        `;
+
+document.body.appendChild(wrapper);const updateBtn = wrapper.querySelector('#update-action');const laterBtn = wrapper.querySelector('#later-action');updateBtn.onclick = () => {const url = CONFIG.playStoreUrl;if (window.cordova && window.cordova.InAppBrowser) {window.cordova.InAppBrowser.open(url, '_system');console.log('[Update Check] Opening Play Store via InAppBrowser');return;}const isAndroid = /android/i.test(navigator.userAgent);if (isAndroid) {const packageName = url.match(/id=([^&]+)/)?.[1];if (packageName) {console.log('[Update Check] Opening Play Store via market:// protocol');window.location.href = `market://details?id=${packageName}`;setTimeout(() => {console.log('[Update Check] Fallback to web URL');window.location.href = url;}, 2000);return;}}console.log('[Update Check] Opening Play Store via window.open');const newWindow = window.open(url, '_blank');if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {console.log('[Update Check] Popup blocked, navigating current window');window.location.href = url;}};if (laterBtn) {laterBtn.onclick = () => {wrapper.remove();};}wrapper.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });}, 300);})();     
+function getJoinTypeFilter() { return state.groupJoinTypeFilter || 'all'; }
+function setJoinTypeFilter(value) {
+    state.groupJoinTypeFilter = value;
+    render();
+}
+window.getJoinTypeFilter = getJoinTypeFilter;
+window.setJoinTypeFilter = setJoinTypeFilter; 
+window.syncTabState = syncTabState;
+window.openAddModal = openAddModal;
+window.handleGroupSubmit = handleGroupSubmit;
+window.closeModal = closeModal;
+window.closeModalOnOverlay = closeModalOnOverlay;
+window.switchTab = switchTab;
+window.initWhatsAppApp = initWhatsAppApp;
+window.openReportModal = openReportModal;
+window.closeReportModal = closeReportModal;
+window.closeReportModalOnOverlay = closeReportModalOnOverlay;
+window.submitReport = submitReport;
+window.selectReportReason = selectReportReason;
+window.showToast = showToast;
+window.renderDeepApp = render;
+window.getFilteredGroups = getFilteredGroups;
+window.getActiveTab = () => state.activeTab;
+window.createGroupCard = createGroupCard;
+window.escapeHtml = escapeHtml;
+window.createChannelCard = createChannelCard;
+window.subscribeToChannels = subscribeToChannels;
+window.createSponsorCard = createSponsorCard;
+////////////////////////////////
+
+let bannerAd = null;
+let interstitialAd = null;
+let appOpenAd = null;
+let lastFullScreenAdAt = 0;
+const COOLDOWN_MS = 60 * 1000;
+
+function canShowFullScreenAd() {return Date.now() - lastFullScreenAdAt > COOLDOWN_MS;}
+
+document.addEventListener('deviceready', async () => {await admob.start();
+  bannerAd = new admob.BannerAd({
+adUnitId: 'ca-app-pub-5188642994982403/8665131063',
+  position: 'bottom',
+  size: 'BANNER'
+    });
+    await bannerAd.show();
+    document.addEventListener('pause', () => bannerAd && bannerAd.hide());
+    document.addEventListener('resume', () => bannerAd && bannerAd.show());
+    appOpenAd = new admob.AppOpenAd({ adUnitId: 'ca-app-pub-5188642994982403/6262594934' });
+    await appOpenAd.load();
+    document.addEventListener('resume', async () => { if (!canShowFullScreenAd()) return; if (!(await appOpenAd.show())) { await appOpenAd.load(); } else { lastFullScreenAdAt = Date.now(); } });}, false);
+function prepareInterstitial() {
+    interstitialAd = new admob.InterstitialAd({ adUnitId: 'ca-app-pub-5188642994982403/7375386113' });
+    interstitialAd.load();}
+async function
+ showInterstitialAfterSubmit() {
+if (!interstitialAd) return;
+if (!canShowFullScreenAd()) return;
+if (await interstitialAd.show()) {
+lastFullScreenAdAt = Date.now();}}
